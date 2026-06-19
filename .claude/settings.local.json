@@ -3,7 +3,19 @@
     "allow": [
       "Bash(npm --version)",
       "Bash(git --version)",
-      "Bash(npx --yes create-next-app@latest . --ts --tailwind --eslint --app --src-dir --import-alias \"@/*\" --use-npm --no-turbopack --yes)"
+      "Bash(npx --yes create-next-app@latest . --ts --tailwind --eslint --app --src-dir --import-alias \"@/*\" --use-npm --no-turbopack --yes)",
+      "Bash(node -e \"const p=require\\('./package.json'\\);console.log\\('next',p.dependencies.next,'react',p.dependencies.react,'tailwind',p.devDependencies.tailwindcss\\)\")",
+      "Bash(npx --yes shadcn@latest init -b neutral -y)",
+      "Bash(npx --yes shadcn@latest init --help)",
+      "Bash(npx --yes shadcn@latest init -b radix -f -y)",
+      "Bash(npx --yes shadcn@latest init -d -f -y)",
+      "Bash(npx --yes shadcn@latest add card tabs separator dropdown-menu chart skeleton input label sonner -y)",
+      "Bash(npm install *)",
+      "Bash(npx vitest *)",
+      "Bash(npx tsc *)",
+      "Bash(echo \"=== EXIT: $? ===\")",
+      "Bash(npx eslint *)",
+      "Bash(echo \"=== ESLINT EXIT: $? ===\")"
     ]
   }
 }

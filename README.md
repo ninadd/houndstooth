@@ -1,36 +1,50 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Portfolio Tracker
 
-## Getting Started
+Personal net-worth & investment tracker. Aggregates accounts across institutions,
+separates taxable vs tax-advantaged holdings, charts Net Worth and Investments over
+time ("Time Machine"), and generates a privacy-preserving daily AI market summary.
 
-First, run the development server:
+**Stack:** Next.js (App Router) · Supabase (Postgres + Auth + RLS) · Plaid · Gemini ·
+Tailwind v4 + shadcn/ui · Recharts. Deployed on Vercel.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+See `.claude/plans/role-you-are-an-kind-blossom.md` for the full architecture & roadmap.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Milestone 1 status — Foundation ✅
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Next.js + Tailwind + shadcn scaffold with a dark-first, Robinhood-inspired theme.
+- Supabase clients: browser (RLS), server (RLS), admin (service-role, server-only).
+- Single-user email auth + `proxy.ts` route protection.
+- Full schema migration with RLS on every table (`supabase/migrations/0001_initial_schema.sql`).
+- AES-256-GCM token encryption helper (`src/lib/crypto.ts`) + tests.
+- Dashboard shell with **two hero charts** (Net Worth + Investments), shared range
+  pills, and allocation cards (mock data until M2).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Local setup
 
-## Learn More
+1. **Create a Supabase project**, then copy its URL + keys into `.env.local`:
+   - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY` (Settings → API)
 
-To learn more about Next.js, take a look at the following resources:
+2. **Generate the token encryption key** and paste into `TOKEN_ENCRYPTION_KEY`:
+   ```bash
+   node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+3. **Apply the schema.** Either paste `supabase/migrations/0001_initial_schema.sql`
+   into the Supabase SQL editor, or use the Supabase CLI (`supabase db push`).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+4. **Create your single user** in Supabase → Authentication → Users → "Add user"
+   (email + password). The `on_auth_user_created` trigger creates the profile row.
 
-## Deploy on Vercel
+5. **Run it:**
+   ```bash
+   npm run dev      # http://localhost:3000  → redirects to /login
+   npm test         # crypto round-trip tests
+   npm run build    # production build
+   ```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Conventions
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Never read/write Plaid access tokens from the browser — they live encrypted in
+  `plaid_items` and the `access_token_encrypted` column is revoked from client roles.
+- Net worth is computed server-side and snapshotted; the frontend only reads derived data.
