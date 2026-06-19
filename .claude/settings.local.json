@@ -15,7 +15,9 @@
       "Bash(npx tsc *)",
       "Bash(echo \"=== EXIT: $? ===\")",
       "Bash(npx eslint *)",
-      "Bash(echo \"=== ESLINT EXIT: $? ===\")"
+      "Bash(echo \"=== ESLINT EXIT: $? ===\")",
+      "Bash(npx --yes shadcn@latest add table badge -y)",
+      "Bash(echo \"=== eslint exit: $? ===\")"
     ]
   }
 }
