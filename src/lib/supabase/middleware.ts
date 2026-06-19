@@ -38,6 +38,13 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
+
+  // API routes enforce their own auth and return JSON (401) rather than being
+  // redirected to an HTML login page.
+  if (pathname.startsWith("/api/")) {
+    return supabaseResponse;
+  }
+
   const isPublic = PUBLIC_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`),
   );

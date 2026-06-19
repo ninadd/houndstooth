@@ -13,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { HoundstoothLogo } from "@/components/houndstooth-logo";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -46,9 +47,9 @@ export default function LoginPage() {
     <main className="flex min-h-screen items-center justify-center px-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="space-y-1 text-center">
-          <div className="mx-auto mb-2 size-9 rounded-full bg-primary" />
+          <HoundstoothLogo className="mx-auto mb-2 size-10 text-primary" />
           <CardTitle className="text-xl">Welcome back</CardTitle>
-          <CardDescription>Sign in to your portfolio</CardDescription>
+          <CardDescription>Sign in to Houndstooth</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">

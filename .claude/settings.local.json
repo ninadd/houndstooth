@@ -17,7 +17,10 @@
       "Bash(npx eslint *)",
       "Bash(echo \"=== ESLINT EXIT: $? ===\")",
       "Bash(npx --yes shadcn@latest add table badge -y)",
-      "Bash(echo \"=== eslint exit: $? ===\")"
+      "Bash(echo \"=== eslint exit: $? ===\")",
+      "Bash(npx --yes shadcn@latest add dialog select -y)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(curl -s -X POST \"http://localhost:3000/api/dev/backfill?days=365\" -w \"\\\\nHTTP %{http_code}\\\\n\")"
     ]
   }
 }
