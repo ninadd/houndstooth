@@ -1,4 +1,4 @@
-# Portfolio Tracker
+# Houndstooth
 
 Personal net-worth & investment tracker. Aggregates accounts across institutions,
 separates taxable vs tax-advantaged holdings, charts Net Worth and Investments over

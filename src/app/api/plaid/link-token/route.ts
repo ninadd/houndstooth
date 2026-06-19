@@ -21,10 +21,15 @@ export async function POST() {
     const plaid = getPlaidClient();
     const response = await plaid.linkTokenCreate({
       user: { client_user_id: user.id },
-      client_name: "Portfolio",
+      client_name: "Houndstooth",
       products: PLAID_PRODUCTS,
       country_codes: PLAID_COUNTRY_CODES as CountryCode[],
       language: "en",
+      // Optional: references a named Link customization configured in the
+      // Plaid Dashboard (brand color, account-select defaults, etc.).
+      ...(process.env.PLAID_LINK_CUSTOMIZATION_NAME
+        ? { link_customization_name: process.env.PLAID_LINK_CUSTOMIZATION_NAME }
+        : {}),
     });
 
     return NextResponse.json({ link_token: response.data.link_token });

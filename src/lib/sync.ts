@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { decrypt } from "@/lib/crypto";
 import { getPlaidClient } from "@/lib/plaid";
 import { classifyTaxTreatment, isDebtType } from "@/lib/tax-classification";
+import { computeAndStoreSnapshot } from "@/lib/snapshot";
 
 type Admin = SupabaseClient;
 
@@ -32,6 +33,10 @@ export async function syncUser(userId: string): Promise<SyncResult> {
       .update({ last_synced_at: new Date().toISOString(), status: "active" })
       .eq("id", item.id);
   }
+
+  // Refresh today's net-worth snapshot from the newly synced balances.
+  await computeAndStoreSnapshot(userId);
+
   return totals;
 }
 
