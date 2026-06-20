@@ -20,7 +20,10 @@
       "Bash(echo \"=== eslint exit: $? ===\")",
       "Bash(npx --yes shadcn@latest add dialog select -y)",
       "mcp__Claude_Preview__preview_start",
-      "Bash(curl -s -X POST \"http://localhost:3000/api/dev/backfill?days=365\" -w \"\\\\nHTTP %{http_code}\\\\n\")"
+      "Bash(curl -s -X POST \"http://localhost:3000/api/dev/backfill?days=365\" -w \"\\\\nHTTP %{http_code}\\\\n\")",
+      "Bash(curl -s \"http://localhost:3000/api/cron/daily?force=1\" -w \"\\\\nHTTP %{http_code}\\\\n\")",
+      "Bash(curl -s \"http://localhost:3000/api/cron/daily\" -w \"\\\\nHTTP %{http_code}\\\\n\")",
+      "Bash(curl -s -X POST \"http://localhost:3000/api/dev/summary?mock=1\" -w \"\\\\nHTTP %{http_code}\\\\n\")"
     ]
   }
 }
