@@ -12,8 +12,13 @@ import {
   AccountsTable,
   type AccountRow,
 } from "@/components/dashboard/accounts-table";
+import {
+  DailySummaryBanner,
+  type DailySummary,
+} from "@/components/dashboard/daily-summary";
 import { Card, CardContent } from "@/components/ui/card";
 import type { SnapshotFigures } from "@/lib/snapshot";
+import type { SummaryDrivers } from "@/lib/daily-summary";
 
 const ZERO_FIGURES: SnapshotFigures = {
   total_assets: 0,
@@ -32,7 +37,7 @@ export default async function DashboardPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const [accountsRes, manualRes, snapshotsRes] = await Promise.all([
+  const [accountsRes, manualRes, snapshotsRes, summaryRes] = await Promise.all([
     supabase
       .from("accounts")
       .select(
@@ -49,6 +54,12 @@ export default async function DashboardPage() {
         "snapshot_date, total_assets, total_debts, net_worth, investable_assets, home_value, taxable_total, tax_advantaged_total",
       )
       .order("snapshot_date", { ascending: true }),
+    supabase
+      .from("daily_summaries")
+      .select("summary_date, model, drivers")
+      .order("summary_date", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   const accounts: AccountRow[] = (accountsRes.data ?? []).map((a) => {
@@ -104,11 +115,21 @@ export default async function DashboardPage() {
 
   const hasAccounts = accounts.length > 0;
 
+  const summary: DailySummary | null = summaryRes.data
+    ? {
+        date: summaryRes.data.summary_date,
+        model: summaryRes.data.model,
+        drivers: summaryRes.data.drivers as SummaryDrivers,
+      }
+    : null;
+
   return (
     <div className="min-h-screen">
       <TopNav email={user.email ?? "account"} />
 
       <main className="mx-auto max-w-5xl space-y-10 px-4 py-8 sm:px-6">
+        <DailySummaryBanner summary={summary} />
+
         <HeroCharts
           series={series}
           latest={{

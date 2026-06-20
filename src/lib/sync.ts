@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { decrypt } from "@/lib/crypto";
 import { getPlaidClient } from "@/lib/plaid";
 import { classifyTaxTreatment, isDebtType } from "@/lib/tax-classification";
-import { computeAndStoreSnapshot } from "@/lib/snapshot";
+import { computeAndStoreSnapshot, pacificDate } from "@/lib/snapshot";
 
 type Admin = SupabaseClient;
 
@@ -64,9 +64,30 @@ export async function syncItem(
   try {
     const inv = await plaid.investmentsHoldingsGet({ access_token: accessToken });
     const securityIdMap = new Map<string, string>();
+    const priceRows: {
+      user_id: string;
+      security_id: string;
+      price_date: string;
+      close_price: number;
+    }[] = [];
+    const today = pacificDate();
     for (const sec of inv.data.securities) {
       const ourId = await upsertSecurity(admin, userId, sec);
       securityIdMap.set(sec.security_id, ourId);
+      if (sec.close_price != null) {
+        priceRows.push({
+          user_id: userId,
+          security_id: ourId,
+          price_date: today,
+          close_price: sec.close_price,
+        });
+      }
+    }
+    // Append today's close prices for day-over-day change (idempotent per day).
+    if (priceRows.length > 0) {
+      await admin
+        .from("security_prices")
+        .upsert(priceRows, { onConflict: "user_id,security_id,price_date" });
     }
     holdingsCount = await replaceHoldings(
       admin,

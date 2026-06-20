@@ -19,6 +19,44 @@ See `.claude/plans/role-you-are-an-kind-blossom.md` for the full architecture & 
 - Dashboard shell with **two hero charts** (Net Worth + Investments), shared range
   pills, and allocation cards (mock data until M2).
 
+## Daily snapshot cron (Milestone 4)
+
+A snapshot of net worth is recorded once per day at **1:10 PM Pacific**.
+
+- Vercel Cron is UTC-only and can't follow DST, so [vercel.json](vercel.json) schedules
+  **two** daily runs (20:10 and 21:10 UTC). The handler at `/api/cron/daily` gates on
+  PT wall-clock and only does work when it's the 1 PM PT hour — so exactly one run
+  fires year-round.
+- **Set `CRON_SECRET`** in Vercel project env. Vercel automatically sends it as
+  `Authorization: Bearer <CRON_SECRET>`; the route rejects requests without it.
+- The cron re-syncs each user from Plaid, then upserts today's `net_worth_snapshots`
+  row (idempotent — re-running the same day overwrites, never duplicates).
+- **Local testing:** `curl "http://localhost:3000/api/cron/daily?force=1"` bypasses the
+  PT gate. `?days=` seeding lives in the dev-only `/api/dev/backfill` route.
+- Note: Vercel Hobby allows 2 cron jobs at daily granularity — this uses exactly 2.
+
+## AI daily summary (Milestone 5)
+
+A privacy-preserving daily briefing, generated after the snapshot in the same cron.
+
+- **Privacy:** [`buildGeminiContext`](src/lib/holdings-report.ts) is the only data that
+  reaches Gemini — sector weights, per-ticker % moves, and the tax split. It **never**
+  contains dollar balances, share counts, or position values (enforced by a test). The
+  dollar figures you see in the lightbox are computed locally and never sent.
+- **Grounding:** [`gemini.ts`](src/lib/gemini.ts) calls `gemini-2.5-flash` with Google
+  Search grounding so macro/sector drivers reflect the actual day. Output is strictly
+  descriptive — never buy/sell/hold advice.
+- **% moves** come from Plaid: each sync appends close prices to `security_prices`, and
+  the report computes day-over-day change (`(today − prior) / prior`). Flat in Sandbox
+  (static prices); real movement appears in Production.
+- **UI:** a notification banner with a **View** button opens a lightbox (tiles, macro
+  summary, portfolio drivers, what-to-watch, and a holdings table with 🚀/🔻 mover
+  flags + per-mover reasons). Dismissal is persisted in `localStorage`.
+- **Setup:** apply migration `supabase/migrations/0002_security_prices.sql`, then set
+  `GEMINI_API_KEY` in env (and enable Google Search grounding for the key).
+- **Local testing:** `curl -X POST "http://localhost:3000/api/dev/summary?mock=1"` seeds
+  a canned summary without an API key (drop `?mock=1` once the key is set).
+
 ## Local setup
 
 1. **Create a Supabase project**, then copy its URL + keys into `.env.local`:
