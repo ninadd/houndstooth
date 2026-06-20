@@ -58,6 +58,24 @@ A privacy-preserving daily briefing, generated after the snapshot in the same cr
 - **Local testing:** `curl -X POST "http://localhost:3000/api/dev/summary?mock=1"` seeds
   a canned summary without an API key (drop `?mock=1` once the key is set).
 
+## Plaid Link OAuth (Production banks)
+
+Major US banks (Chase, Wells Fargo, BofA) use OAuth in Production. The flow:
+
+- Link is created with a `redirect_uri` ([link-token route](src/app/api/plaid/link-token/route.ts),
+  env-gated by `PLAID_REDIRECT_URI`). The `link_token` is persisted to `localStorage`
+  ([plaid-link.ts](src/lib/plaid-link.ts)) before opening Link.
+- The bank redirects back to **`/plaid-oauth`** ([page](src/app/plaid-oauth/page.tsx)),
+  which resumes Link with `receivedRedirectUri = window.location.href` + the stored
+  token, auto-opens, then exchanges the public token and returns to `/`.
+
+**Setup:**
+1. Plaid Dashboard → **Developers → API → Allowed redirect URIs** → add your exact URL,
+   e.g. `https://your-domain.com/plaid-oauth` (and `http://localhost:3000/plaid-oauth`
+   for Sandbox testing). No query params, no `#`.
+2. Set `PLAID_REDIRECT_URI` to that exact value (Vercel + `.env.local`).
+3. Leave it unset to keep simple non-OAuth Sandbox linking working as before.
+
 ## Local setup
 
 1. **Create a Supabase project**, then copy its URL + keys into `.env.local`:

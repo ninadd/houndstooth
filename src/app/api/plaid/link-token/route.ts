@@ -25,6 +25,13 @@ export async function POST() {
       products: PLAID_PRODUCTS,
       country_codes: PLAID_COUNTRY_CODES as CountryCode[],
       language: "en",
+      // Required for OAuth institutions (Chase, Wells Fargo, BofA, …). Must
+      // EXACTLY match an Allowed redirect URI registered in the Plaid Dashboard
+      // (https in prod; http://localhost allowed in Sandbox). Omitted when unset
+      // so non-OAuth Sandbox linking still works.
+      ...(process.env.PLAID_REDIRECT_URI
+        ? { redirect_uri: process.env.PLAID_REDIRECT_URI }
+        : {}),
       // Optional: references a named Link customization configured in the
       // Plaid Dashboard (brand color, account-select defaults, etc.).
       ...(process.env.PLAID_LINK_CUSTOMIZATION_NAME

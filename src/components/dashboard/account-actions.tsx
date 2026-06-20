@@ -8,6 +8,7 @@ import {
 } from "react-plaid-link";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { LINK_TOKEN_KEY, exchangePublicToken } from "@/lib/plaid-link";
 
 export function AccountActions({ hasAccounts }: { hasAccounts: boolean }) {
   const router = useRouter();
@@ -19,13 +20,7 @@ export function AccountActions({ hasAccounts }: { hasAccounts: boolean }) {
     async (public_token) => {
       setBusy(true);
       try {
-        const res = await fetch("/api/plaid/exchange", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ public_token }),
-        });
-        if (!res.ok) throw new Error("exchange failed");
-        const data = await res.json();
+        const data = await exchangePublicToken(public_token);
         toast.success(
           `Linked. Synced ${data.accounts} accounts, ${data.holdings} holdings.`,
         );
@@ -33,6 +28,7 @@ export function AccountActions({ hasAccounts }: { hasAccounts: boolean }) {
       } catch {
         toast.error("Failed to link institution.");
       } finally {
+        localStorage.removeItem(LINK_TOKEN_KEY);
         setBusy(false);
         setToken(null);
       }
@@ -60,6 +56,8 @@ export function AccountActions({ hasAccounts }: { hasAccounts: boolean }) {
       const res = await fetch("/api/plaid/link-token", { method: "POST" });
       if (!res.ok) throw new Error("link-token failed");
       const { link_token } = await res.json();
+      // Persist so the OAuth redirect page can resume Link with the same token.
+      localStorage.setItem(LINK_TOKEN_KEY, link_token);
       openRequested.current = true;
       setToken(link_token);
     } catch {
