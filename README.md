@@ -23,10 +23,11 @@ See `.claude/plans/role-you-are-an-kind-blossom.md` for the full architecture & 
 
 A snapshot of net worth is recorded once per day at **1:10 PM Pacific**.
 
+- Runs **weekdays only** (markets are closed weekends).
 - Vercel Cron is UTC-only and can't follow DST, so [vercel.json](vercel.json) schedules
-  **two** daily runs (20:10 and 21:10 UTC). The handler at `/api/cron/daily` gates on
-  PT wall-clock and only does work when it's the 1 PM PT hour — so exactly one run
-  fires year-round.
+  **two** weekday runs (20:10 and 21:10 UTC, Mon–Fri). The handler at `/api/cron/daily`
+  gates on PT wall-clock and only does work when it's the 1 PM PT hour — so exactly one
+  run fires per weekday year-round.
 - **Set `CRON_SECRET`** in Vercel project env. Vercel automatically sends it as
   `Authorization: Bearer <CRON_SECRET>`; the route rejects requests without it.
 - The cron re-syncs each user from Plaid, then upserts today's `net_worth_snapshots`
