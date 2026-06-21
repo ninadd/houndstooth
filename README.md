@@ -15,7 +15,6 @@ See `.claude/plans/role-you-are-an-kind-blossom.md` for the full architecture & 
 - Supabase clients: browser (RLS), server (RLS), admin (service-role, server-only).
 - Single-user email auth + `proxy.ts` route protection.
 - Full schema migration with RLS on every table (`supabase/migrations/0001_initial_schema.sql`).
-- AES-256-GCM token encryption helper (`src/lib/crypto.ts`) + tests.
 - Dashboard shell with **two hero charts** (Net Worth + Investments), shared range
   pills, and allocation cards (mock data until M2).
 
@@ -66,10 +65,13 @@ Brokerages are connected through SnapTrade's hosted Connection Portal. The flow:
 - The data layer is provider-abstracted ([src/lib/providers](src/lib/providers)): a
   `DataProvider` interface with a `SnapTradeProvider` and a `MockProvider`. The active one
   is chosen by `DATA_PROVIDER` (`snaptrade` default, `mock` for offline/no-creds testing).
+- **Personal tier:** these are personal SnapTrade keys (`clientId` `PERS-…`), which
+  auto-provision a single user at signup — there is no `registerUser`. The fixed
+  `SNAPTRADE_USER_ID` + `SNAPTRADE_USER_SECRET` (from env) are used for every call.
 - **Connect:** clicking *Connect account* POSTs to
-  [`/api/snaptrade/connect`](src/app/api/snaptrade/connect/route.ts), which registers the
-  user with SnapTrade on first use (storing the `userSecret` encrypted on `profiles`),
-  generates a Connection Portal URL, and redirects the browser to it.
+  [`/api/snaptrade/connect`](src/app/api/snaptrade/connect/route.ts), which generates a
+  Connection Portal URL from the env credentials and redirects the browser to it. (You can
+  also connect brokerages directly in the SnapTrade dashboard.)
 - **Completion:** once a brokerage is connected, SnapTrade POSTs a signed webhook to
   [`/api/snaptrade/webhook`](src/app/api/snaptrade/webhook/route.ts) (`CONNECTION_ADDED`,
   `ACCOUNT_HOLDINGS_UPDATED`). The route verifies the `Signature` header (base64
@@ -79,7 +81,9 @@ Brokerages are connected through SnapTrade's hosted Connection Portal. The flow:
 **Setup:**
 1. SnapTrade Dashboard → **API Keys** → set `SNAPTRADE_CLIENT_ID` and
    `SNAPTRADE_CONSUMER_KEY` (Vercel + `.env.local`).
-2. SnapTrade Dashboard → **Webhooks** → point the listener at
+2. SnapTrade Dashboard → **Settings → Security** → set `SNAPTRADE_USER_ID` and
+   `SNAPTRADE_USER_SECRET` (the auto-provisioned personal user).
+3. SnapTrade Dashboard → **Webhooks** → point the listener at
    `https://<your-domain>/api/snaptrade/webhook` (deployed only).
 
 ## Local setup
@@ -88,10 +92,8 @@ Brokerages are connected through SnapTrade's hosted Connection Portal. The flow:
    - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `SUPABASE_SERVICE_ROLE_KEY` (Settings → API)
 
-2. **Generate the token encryption key** and paste into `TOKEN_ENCRYPTION_KEY`:
-   ```bash
-   node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
-   ```
+2. **Set the SnapTrade credentials** (see the SnapTrade connection flow section above):
+   `SNAPTRADE_CLIENT_ID`, `SNAPTRADE_CONSUMER_KEY`, `SNAPTRADE_USER_ID`, `SNAPTRADE_USER_SECRET`.
 
 3. **Apply the schema.** Either paste `supabase/migrations/0001_initial_schema.sql`
    into the Supabase SQL editor, or use the Supabase CLI (`supabase db push`).
@@ -102,12 +104,12 @@ Brokerages are connected through SnapTrade's hosted Connection Portal. The flow:
 5. **Run it:**
    ```bash
    npm run dev      # http://localhost:3000  → redirects to /login
-   npm test         # crypto round-trip tests
+   npm test         # unit tests (adapter mapping, webhook, classification, …)
    npm run build    # production build
    ```
 
 ## Conventions
 
-- Never read/write the SnapTrade userSecret from the browser — it lives encrypted in
-  `profiles.snaptrade_user_secret_encrypted`, a column revoked from client roles.
+- Never expose the SnapTrade `userSecret` to the browser — it stays server-only (env),
+  used exclusively by Route Handlers / cron via the service-role client.
 - Net worth is computed server-side and snapshotted; the frontend only reads derived data.

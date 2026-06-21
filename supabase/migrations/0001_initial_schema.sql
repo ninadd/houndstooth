@@ -21,9 +21,6 @@ create table public.profiles (
   id           uuid primary key references auth.users (id) on delete cascade,
   display_name text,
   timezone     text not null default 'America/Los_Angeles',
-  -- SnapTrade userSecret (encrypted at rest). The SnapTrade userId is auth.uid().
-  -- One secret per user; all brokerage authorizations hang off it.
-  snaptrade_user_secret_encrypted text,
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now()
 );
@@ -31,11 +28,6 @@ create table public.profiles (
 create trigger profiles_set_updated_at
   before update on public.profiles
   for each row execute function public.set_updated_at();
-
--- The SnapTrade userSecret must never be readable by client roles; only the
--- service-role key (which bypasses RLS) may read it for server-side sync.
-revoke select (snaptrade_user_secret_encrypted) on public.profiles
-  from anon, authenticated;
 
 -- Auto-create a profile row whenever a new auth user is created.
 create or replace function public.handle_new_user()
