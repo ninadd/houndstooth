@@ -53,11 +53,16 @@ const CLASS_LABEL: Record<ManualAsset["asset_class"], string> = {
   other: "Other",
 };
 
-const CLASS_OPTION_LABEL: Record<ManualAsset["asset_class"], string> = {
+/** Dropdown selection: the asset classes plus a synthetic "debt" entry that
+ *  maps to asset_class="other" + is_debt on submit. */
+type EntryType = ManualAsset["asset_class"] | "debt";
+
+const OPTION_LABEL: Record<EntryType, string> = {
   real_estate: "Real estate (home)",
   equity_comp: "Equity comp (e.g. Solium)",
   "529": "529 plan",
   other: "Other",
+  debt: "Debt (mortgage, HELOC, credit card)",
 };
 
 export function ManualAssetsCard({ assets }: { assets: ManualAsset[] }) {
@@ -67,7 +72,7 @@ export function ManualAssetsCard({ assets }: { assets: ManualAsset[] }) {
         <div className="space-y-1.5">
           <CardTitle className="text-base">Manual entries</CardTitle>
           <CardDescription>
-            Home value, equity comp, 529, and anything Plaid can&apos;t reach.
+            Home value, equity comp, 529, and anything SnapTrade can&apos;t reach.
           </CardDescription>
         </div>
         <AddAssetDialog />
@@ -84,12 +89,13 @@ export function ManualAssetsCard({ assets }: { assets: ManualAsset[] }) {
                 <div>
                   <div className="font-medium">{a.label}</div>
                   <div className="mt-0.5 flex items-center gap-2">
-                    <Badge variant="outline" className="text-xs">
-                      {CLASS_LABEL[a.asset_class]}
-                    </Badge>
-                    {a.is_debt && (
+                    {a.is_debt ? (
                       <Badge variant="outline" className="text-xs text-loss">
-                        debt
+                        Debt
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-xs">
+                        {CLASS_LABEL[a.asset_class]}
                       </Badge>
                     )}
                   </div>
@@ -126,18 +132,20 @@ export function ManualAssetsCard({ assets }: { assets: ManualAsset[] }) {
 function AddAssetDialog() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [assetClass, setAssetClass] =
-    useState<ManualAsset["asset_class"]>("real_estate");
+  const [entryType, setEntryType] = useState<EntryType>("real_estate");
   const [pending, setPending] = useState(false);
 
-  // 529 = always tax-advantaged; real estate = excluded from tax split.
-  const showTaxTreatment = assetClass === "equity_comp" || assetClass === "other";
+  const isDebt = entryType === "debt";
+  // 529 = always tax-advantaged; real estate & debts = excluded from tax split.
+  const showTaxTreatment = entryType === "equity_comp" || entryType === "other";
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setPending(true);
     const formData = new FormData(e.currentTarget);
-    formData.set("asset_class", assetClass);
+    // "debt" is a UI-only type: store it as an "other" asset flagged is_debt.
+    formData.set("asset_class", isDebt ? "other" : entryType);
+    if (isDebt) formData.set("is_debt", "on");
     const result = await addManualAsset(formData);
     setPending(false);
 
@@ -147,7 +155,7 @@ function AddAssetDialog() {
     }
     toast.success("Entry added.");
     setOpen(false);
-    setAssetClass("real_estate");
+    setEntryType("real_estate");
     router.refresh();
   }
 
@@ -165,7 +173,7 @@ function AddAssetDialog() {
           <DialogHeader>
             <DialogTitle>Add manual entry</DialogTitle>
             <DialogDescription>
-              Track an asset or debt that isn&apos;t connected through Plaid.
+              Track an asset or debt that isn&apos;t connected through SnapTrade.
             </DialogDescription>
           </DialogHeader>
 
@@ -183,16 +191,12 @@ function AddAssetDialog() {
             <div className="space-y-2">
               <Label>Type</Label>
               <Select
-                value={assetClass}
-                onValueChange={(v) =>
-                  setAssetClass(v as ManualAsset["asset_class"])
-                }
+                value={entryType}
+                onValueChange={(v) => setEntryType(v as EntryType)}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue>
-                    {(v: string) =>
-                      CLASS_OPTION_LABEL[v as ManualAsset["asset_class"]] ?? v
-                    }
+                    {(v: string) => OPTION_LABEL[v as EntryType] ?? v}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
@@ -202,12 +206,17 @@ function AddAssetDialog() {
                   </SelectItem>
                   <SelectItem value="529">529 plan</SelectItem>
                   <SelectItem value="other">Other</SelectItem>
+                  <SelectItem value="debt">
+                    Debt (mortgage, HELOC, credit card)
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="value">Amount (USD)</Label>
+              <Label htmlFor="value">
+                {isDebt ? "Balance owed (USD)" : "Amount (USD)"}
+              </Label>
               <Input
                 id="value"
                 name="value"
@@ -238,14 +247,16 @@ function AddAssetDialog() {
               </div>
             )}
 
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                name="is_debt"
-                className="size-4 rounded border-border accent-[var(--primary)]"
-              />
-              This is a debt (e.g. mortgage)
-            </label>
+            {!isDebt && (
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  name="is_debt"
+                  className="size-4 rounded border-border accent-[var(--primary)]"
+                />
+                This is a debt (e.g. mortgage)
+              </label>
+            )}
           </div>
 
           <DialogFooter>

@@ -1,8 +1,8 @@
 /**
  * Modular tax-treatment classification.
  *
- * Maps a Plaid account (type + subtype) to a tax bucket. Kept as a single
- * pure function + config set so it is easy to test and adjust without touching
+ * Maps an account (type + subtype) to a tax bucket. Kept as a single pure
+ * function + config set so it is easy to test and adjust without touching
  * ingestion logic. A user can still override the result per-account via
  * `accounts.tax_treatment_override`.
  */
@@ -10,9 +10,10 @@
 export type TaxTreatment = "taxable" | "tax_advantaged";
 
 /**
- * Plaid investment account subtypes that are tax-advantaged in the US (plus a
- * few common registered accounts). Compared case-insensitively after trimming.
- * Source: Plaid `account.subtype` enum for investment accounts.
+ * Account subtypes that are tax-advantaged in the US (plus a few common
+ * registered accounts). Compared case-insensitively after trimming. Covers
+ * Plaid's `account.subtype` enum exactly; SnapTrade's free-form `raw_type`
+ * (e.g. "Roth IRA") is matched via keyword tokens below.
  */
 const TAX_ADVANTAGED_SUBTYPES = new Set<string>([
   "401a",
@@ -55,19 +56,57 @@ function normalize(value: string | null | undefined): string {
 }
 
 /**
- * Classify an account's tax treatment from its Plaid type/subtype.
- * Defaults to "taxable" for anything not explicitly tax-advantaged
+ * Keyword tokens that mark a tax-advantaged account when they appear anywhere in
+ * a free-form brokerage label. SnapTrade's `raw_type` isn't an enum — it returns
+ * strings like "Roth IRA" or "Traditional 401k" — so an exact Set lookup misses.
+ * Matched on word boundaries to avoid false hits (e.g. "ira" inside "iranium").
+ */
+const TAX_ADVANTAGED_KEYWORDS = [
+  "roth",
+  "ira",
+  "401k",
+  "401(k)",
+  "403b",
+  "457b",
+  "hsa",
+  "529",
+  "sep",
+  "simple",
+  "pension",
+  "tsp",
+  "keogh",
+  "retirement",
+];
+
+/**
+ * Classify an account's tax treatment from its type/subtype. Tries an exact
+ * subtype match first (Plaid enums), then a keyword scan of the free-form label
+ * (SnapTrade `raw_type`). Defaults to "taxable" for anything not recognized
  * (brokerage, depository, loans, credit, cash, etc.).
  */
 export function classifyTaxTreatment(
   type: string | null | undefined,
   subtype: string | null | undefined,
+  name?: string | null | undefined,
 ): TaxTreatment {
   const sub = normalize(subtype);
   if (TAX_ADVANTAGED_SUBTYPES.has(sub)) {
     return "tax_advantaged";
   }
+  // Some brokerages (e.g. Schwab via SnapTrade) report a generic subtype like
+  // "investmentAccount" and put the real signal ("Roth IRA", "Rollover IRA") in
+  // the account name. Scan keywords across both.
+  const label = `${sub} ${normalize(name)}`.trim();
+  if (label && TAX_ADVANTAGED_KEYWORDS.some((kw) => hasWord(label, kw))) {
+    return "tax_advantaged";
+  }
   return "taxable";
+}
+
+/** True when `keyword` appears in `text` as a whole token (boundary-delimited). */
+function hasWord(text: string, keyword: string): boolean {
+  const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?:^|[^a-z0-9])${escaped}(?:[^a-z0-9]|$)`).test(text);
 }
 
 /**
@@ -76,11 +115,12 @@ export function classifyTaxTreatment(
 export function effectiveTaxTreatment(account: {
   type?: string | null;
   subtype?: string | null;
+  name?: string | null;
   tax_treatment_override?: TaxTreatment | null;
 }): TaxTreatment {
   return (
     account.tax_treatment_override ??
-    classifyTaxTreatment(account.type, account.subtype)
+    classifyTaxTreatment(account.type, account.subtype, account.name)
   );
 }
 

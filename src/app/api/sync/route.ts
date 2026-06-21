@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { syncUser, extractPlaidError } from "@/lib/sync";
+import { syncUser, extractProviderError } from "@/lib/sync";
 
 export async function POST() {
   const supabase = await createClient();
@@ -15,7 +15,7 @@ export async function POST() {
     const result = await syncUser(user.id);
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {
-    console.error("sync error", extractPlaidError(err));
+    console.error("sync error", extractProviderError(err));
     return NextResponse.json({ error: "Sync failed" }, { status: 500 });
   }
 }

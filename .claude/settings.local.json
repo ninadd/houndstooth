@@ -24,7 +24,9 @@
       "Bash(curl -s \"http://localhost:3000/api/cron/daily?force=1\" -w \"\\\\nHTTP %{http_code}\\\\n\")",
       "Bash(curl -s \"http://localhost:3000/api/cron/daily\" -w \"\\\\nHTTP %{http_code}\\\\n\")",
       "Bash(curl -s -X POST \"http://localhost:3000/api/dev/summary?mock=1\" -w \"\\\\nHTTP %{http_code}\\\\n\")",
-      "WebFetch(domain:plaid.com)"
+      "WebFetch(domain:plaid.com)",
+      "Bash(git --no-pager log --oneline -5)",
+      "WebFetch(domain:docs.snaptrade.com)"
     ]
   }
 }

@@ -15,8 +15,8 @@ export function TopNav({ email }: { email: string }) {
     <header className="sticky top-0 z-20 border-b border-border bg-background/80 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4 sm:px-6">
         <div className="flex items-center gap-2">
-          <HoundstoothLogo className="size-6 text-primary" />
-          <span className="text-sm font-semibold tracking-tight">Houndstooth</span>
+          <HoundstoothLogo className="size-8 text-primary" />
+          <span className="text-xl font-semibold tracking-tight">Houndstooth</span>
         </div>
 
         <DropdownMenu>

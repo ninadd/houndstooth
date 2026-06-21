@@ -5,7 +5,7 @@ import {
 } from "node:crypto";
 
 /**
- * AES-256-GCM encryption for secrets at rest (Plaid access tokens).
+ * AES-256-GCM encryption for secrets at rest (SnapTrade userSecret).
  * Server-only. The key comes from TOKEN_ENCRYPTION_KEY: a 32-byte key,
  * base64-encoded. Generate one with:
  *   node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"

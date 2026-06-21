@@ -8,8 +8,8 @@ beforeAll(() => {
 });
 
 describe("crypto", () => {
-  it("round-trips a Plaid-like access token", () => {
-    const token = "access-sandbox-9f1c2e3a-1234-5678-9abc-def012345678";
+  it("round-trips a SnapTrade-like userSecret", () => {
+    const token = "9f1c2e3a-1234-5678-9abc-def012345678";
     const ciphertext = encrypt(token);
     expect(ciphertext).not.toContain(token);
     expect(decrypt(ciphertext)).toBe(token);

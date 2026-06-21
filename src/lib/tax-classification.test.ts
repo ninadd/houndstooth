@@ -31,6 +31,33 @@ describe("classifyTaxTreatment", () => {
     expect(classifyTaxTreatment("INVESTMENT", "SEP IRA")).toBe("tax_advantaged");
   });
 
+  it("matches SnapTrade free-form raw_type labels via keyword tokens", () => {
+    expect(classifyTaxTreatment("investment", "Roth IRA")).toBe(
+      "tax_advantaged",
+    );
+    expect(classifyTaxTreatment("investment", "Traditional 401k")).toBe(
+      "tax_advantaged",
+    );
+    expect(classifyTaxTreatment("investment", "Rollover IRA")).toBe(
+      "tax_advantaged",
+    );
+    expect(classifyTaxTreatment("investment", "Individual")).toBe("taxable");
+    expect(classifyTaxTreatment("investment", "Joint Taxable")).toBe("taxable");
+  });
+
+  it("reads the account name when the subtype is generic (Schwab via SnapTrade)", () => {
+    // raw_type "investmentAccount" is generic; the signal is in the name.
+    expect(
+      classifyTaxTreatment("investment", "investmentAccount", "Roth Contributory IRA"),
+    ).toBe("tax_advantaged");
+    expect(
+      classifyTaxTreatment("investment", "investmentAccount", "Rollover IRA"),
+    ).toBe("tax_advantaged");
+    expect(
+      classifyTaxTreatment("investment", "investmentAccount", "Community Property"),
+    ).toBe("taxable");
+  });
+
   it("defaults unknown/null subtypes to taxable", () => {
     expect(classifyTaxTreatment("investment", null)).toBe("taxable");
     expect(classifyTaxTreatment(null, undefined)).toBe("taxable");

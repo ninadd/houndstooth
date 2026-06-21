@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { syncUser, extractPlaidError } from "@/lib/sync";
+import { syncUser, extractProviderError } from "@/lib/sync";
 import { generateDailySummary } from "@/lib/daily-summary";
 
 // Always run on-demand (never cached/statically optimized).
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
       }
       results.push({ userId: user.id, ...r, summary });
     } catch (err) {
-      console.error("cron failed", user.id, extractPlaidError(err));
+      console.error("cron failed", user.id, extractProviderError(err));
       results.push({ userId: user.id, error: "sync_failed" });
     }
   }

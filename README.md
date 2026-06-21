@@ -4,7 +4,7 @@ Personal net-worth & investment tracker. Aggregates accounts across institutions
 separates taxable vs tax-advantaged holdings, charts Net Worth and Investments over
 time ("Time Machine"), and generates a privacy-preserving daily AI market summary.
 
-**Stack:** Next.js (App Router) · Supabase (Postgres + Auth + RLS) · Plaid · Gemini ·
+**Stack:** Next.js (App Router) · Supabase (Postgres + Auth + RLS) · SnapTrade · Gemini ·
 Tailwind v4 + shadcn/ui · Recharts. Deployed on Vercel.
 
 See `.claude/plans/role-you-are-an-kind-blossom.md` for the full architecture & roadmap.
@@ -30,8 +30,9 @@ A snapshot of net worth is recorded once per day at **1:10 PM Pacific**.
   run fires per weekday year-round.
 - **Set `CRON_SECRET`** in Vercel project env. Vercel automatically sends it as
   `Authorization: Bearer <CRON_SECRET>`; the route rejects requests without it.
-- The cron re-syncs each user from Plaid, then upserts today's `net_worth_snapshots`
-  row (idempotent — re-running the same day overwrites, never duplicates).
+- The cron re-syncs each user from SnapTrade, then upserts today's `net_worth_snapshots`
+  row (idempotent — re-running the same day overwrites, never duplicates). After a one-time
+  brokerage connect, no manual pull is needed.
 - **Local testing:** `curl "http://localhost:3000/api/cron/daily?force=1"` bypasses the
   PT gate. `?days=` seeding lives in the dev-only `/api/dev/backfill` route.
 - Note: Vercel Hobby allows 2 cron jobs at daily granularity — this uses exactly 2.
@@ -47,9 +48,9 @@ A privacy-preserving daily briefing, generated after the snapshot in the same cr
 - **Grounding:** [`gemini.ts`](src/lib/gemini.ts) calls `gemini-2.5-flash` with Google
   Search grounding so macro/sector drivers reflect the actual day. Output is strictly
   descriptive — never buy/sell/hold advice.
-- **% moves** come from Plaid: each sync appends close prices to `security_prices`, and
-  the report computes day-over-day change (`(today − prior) / prior`). Flat in Sandbox
-  (static prices); real movement appears in Production.
+- **% moves** come from SnapTrade: each sync appends close prices to `security_prices`, and
+  the report computes day-over-day change (`(today − prior) / prior`). Flat with a static
+  sandbox brokerage; real movement appears with a live connection.
 - **UI:** a notification banner with a **View** button opens a lightbox (tiles, macro
   summary, portfolio drivers, what-to-watch, and a holdings table with 🚀/🔻 mover
   flags + per-mover reasons). Dismissal is persisted in `localStorage`.
@@ -58,23 +59,28 @@ A privacy-preserving daily briefing, generated after the snapshot in the same cr
 - **Local testing:** `curl -X POST "http://localhost:3000/api/dev/summary?mock=1"` seeds
   a canned summary without an API key (drop `?mock=1` once the key is set).
 
-## Plaid Link OAuth (Production banks)
+## SnapTrade connection flow
 
-Major US banks (Chase, Wells Fargo, BofA) use OAuth in Production. The flow:
+Brokerages are connected through SnapTrade's hosted Connection Portal. The flow:
 
-- Link is created with a `redirect_uri` ([link-token route](src/app/api/plaid/link-token/route.ts),
-  env-gated by `PLAID_REDIRECT_URI`). The `link_token` is persisted to `localStorage`
-  ([plaid-link.ts](src/lib/plaid-link.ts)) before opening Link.
-- The bank redirects back to **`/plaid-oauth`** ([page](src/app/plaid-oauth/page.tsx)),
-  which resumes Link with `receivedRedirectUri = window.location.href` + the stored
-  token, auto-opens, then exchanges the public token and returns to `/`.
+- The data layer is provider-abstracted ([src/lib/providers](src/lib/providers)): a
+  `DataProvider` interface with a `SnapTradeProvider` and a `MockProvider`. The active one
+  is chosen by `DATA_PROVIDER` (`snaptrade` default, `mock` for offline/no-creds testing).
+- **Connect:** clicking *Connect account* POSTs to
+  [`/api/snaptrade/connect`](src/app/api/snaptrade/connect/route.ts), which registers the
+  user with SnapTrade on first use (storing the `userSecret` encrypted on `profiles`),
+  generates a Connection Portal URL, and redirects the browser to it.
+- **Completion:** once a brokerage is connected, SnapTrade POSTs a signed webhook to
+  [`/api/snaptrade/webhook`](src/app/api/snaptrade/webhook/route.ts) (`CONNECTION_ADDED`,
+  `ACCOUNT_HOLDINGS_UPDATED`). The route verifies the `Signature` header (base64
+  HMAC-SHA256 of the raw body, keyed by the consumer key) and calls `syncUser`. **Locally**
+  (webhooks can't reach `localhost`) use the **Sync** button, which runs the same pull.
 
 **Setup:**
-1. Plaid Dashboard → **Developers → API → Allowed redirect URIs** → add your exact URL,
-   e.g. `https://your-domain.com/plaid-oauth` (and `http://localhost:3000/plaid-oauth`
-   for Sandbox testing). No query params, no `#`.
-2. Set `PLAID_REDIRECT_URI` to that exact value (Vercel + `.env.local`).
-3. Leave it unset to keep simple non-OAuth Sandbox linking working as before.
+1. SnapTrade Dashboard → **API Keys** → set `SNAPTRADE_CLIENT_ID` and
+   `SNAPTRADE_CONSUMER_KEY` (Vercel + `.env.local`).
+2. SnapTrade Dashboard → **Webhooks** → point the listener at
+   `https://<your-domain>/api/snaptrade/webhook` (deployed only).
 
 ## Local setup
 
@@ -102,6 +108,6 @@ Major US banks (Chase, Wells Fargo, BofA) use OAuth in Production. The flow:
 
 ## Conventions
 
-- Never read/write Plaid access tokens from the browser — they live encrypted in
-  `plaid_items` and the `access_token_encrypted` column is revoked from client roles.
+- Never read/write the SnapTrade userSecret from the browser — it lives encrypted in
+  `profiles.snaptrade_user_secret_encrypted`, a column revoked from client roles.
 - Net worth is computed server-side and snapshotted; the frontend only reads derived data.
