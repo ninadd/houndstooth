@@ -43,7 +43,7 @@ export async function backfillSnapshots(
     admin
       .from("accounts")
       .select(
-        "current_balance, is_debt, type, subtype, tax_treatment, tax_treatment_override",
+        "current_balance, is_debt, type, subtype, name, tax_treatment, tax_treatment_override",
       )
       .eq("user_id", userId),
     admin
@@ -60,6 +60,7 @@ export async function backfillSnapshots(
         is_debt: a.is_debt,
         type: a.type,
         subtype: a.subtype,
+        name: a.name,
         tax_treatment: a.tax_treatment,
         tax_treatment_override: a.tax_treatment_override,
       }),

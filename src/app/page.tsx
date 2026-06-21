@@ -41,7 +41,7 @@ export default async function DashboardPage() {
     supabase
       .from("accounts")
       .select(
-        "id, name, official_name, type, subtype, tax_treatment, tax_treatment_override, is_debt, current_balance, mask, plaid_items(institution_name)",
+        "id, name, official_name, type, subtype, tax_treatment, tax_treatment_override, is_debt, current_balance, mask, connections(institution_name)",
       )
       .order("current_balance", { ascending: false, nullsFirst: false }),
     supabase
@@ -63,7 +63,7 @@ export default async function DashboardPage() {
   ]);
 
   const accounts: AccountRow[] = (accountsRes.data ?? []).map((a) => {
-    const rel = a.plaid_items as
+    const rel = a.connections as
       | { institution_name: string | null }
       | { institution_name: string | null }[]
       | null;
@@ -153,7 +153,7 @@ export default async function DashboardPage() {
           ) : (
             <Card className="border-dashed">
               <CardContent className="py-10 text-center text-sm text-muted-foreground">
-                No accounts yet. Connect an institution with Plaid to pull in
+                No accounts yet. Connect a brokerage with SnapTrade to pull in
                 balances and holdings.
               </CardContent>
             </Card>

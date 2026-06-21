@@ -1,68 +1,26 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  usePlaidLink,
-  type PlaidLinkOnSuccess,
-} from "react-plaid-link";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { LINK_TOKEN_KEY, exchangePublicToken } from "@/lib/plaid-link";
 
 export function AccountActions({ hasAccounts }: { hasAccounts: boolean }) {
   const router = useRouter();
-  const [token, setToken] = useState<string | null>(null);
-  const openRequested = useRef(false);
   const [busy, setBusy] = useState(false);
-
-  const onSuccess = useCallback<PlaidLinkOnSuccess>(
-    async (public_token) => {
-      setBusy(true);
-      try {
-        const data = await exchangePublicToken(public_token);
-        toast.success(
-          `Linked. Synced ${data.accounts} accounts, ${data.holdings} holdings.`,
-        );
-        router.refresh();
-      } catch {
-        toast.error("Failed to link institution.");
-      } finally {
-        localStorage.removeItem(LINK_TOKEN_KEY);
-        setBusy(false);
-        setToken(null);
-      }
-    },
-    [router],
-  );
-
-  const { open, ready } = usePlaidLink({
-    token,
-    onSuccess,
-    onExit: () => setToken(null),
-  });
-
-  // Auto-open Link once we have a token and the SDK is ready.
-  useEffect(() => {
-    if (openRequested.current && token && ready) {
-      openRequested.current = false;
-      open();
-    }
-  }, [token, ready, open]);
 
   async function handleConnect() {
     setBusy(true);
     try {
-      const res = await fetch("/api/plaid/link-token", { method: "POST" });
-      if (!res.ok) throw new Error("link-token failed");
-      const { link_token } = await res.json();
-      // Persist so the OAuth redirect page can resume Link with the same token.
-      localStorage.setItem(LINK_TOKEN_KEY, link_token);
-      openRequested.current = true;
-      setToken(link_token);
+      const res = await fetch("/api/snaptrade/connect", { method: "POST" });
+      if (!res.ok) throw new Error("connect failed");
+      const { redirectURI } = await res.json();
+      if (!redirectURI) throw new Error("no redirectURI");
+      // Hand off to the SnapTrade Connection Portal (URL expires in ~5 min).
+      window.location.href = redirectURI;
+      // We navigate away on success, so leave `busy` set.
     } catch {
-      toast.error("Couldn't start Plaid Link.");
-    } finally {
+      toast.error("Couldn't start the connection.");
       setBusy(false);
     }
   }
@@ -84,11 +42,9 @@ export function AccountActions({ hasAccounts }: { hasAccounts: boolean }) {
 
   return (
     <div className="flex items-center gap-2">
-      {hasAccounts && (
-        <Button variant="outline" onClick={handleSync} disabled={busy}>
-          Sync
-        </Button>
-      )}
+      <Button variant="outline" onClick={handleSync} disabled={busy}>
+        Sync
+      </Button>
       <Button onClick={handleConnect} disabled={busy}>
         {hasAccounts ? "Add account" : "Connect account"}
       </Button>

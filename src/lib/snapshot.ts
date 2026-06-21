@@ -9,6 +9,7 @@ export type SnapshotAccount = {
   is_debt: boolean;
   type: string | null;
   subtype: string | null;
+  name?: string | null;
   tax_treatment: TaxTreatment;
   tax_treatment_override: TaxTreatment | null;
 };
@@ -115,7 +116,7 @@ export async function computeAndStoreSnapshot(
     admin
       .from("accounts")
       .select(
-        "current_balance, is_debt, type, subtype, tax_treatment, tax_treatment_override",
+        "current_balance, is_debt, type, subtype, name, tax_treatment, tax_treatment_override",
       )
       .eq("user_id", userId),
     admin
@@ -130,6 +131,7 @@ export async function computeAndStoreSnapshot(
       is_debt: a.is_debt,
       type: a.type,
       subtype: a.subtype,
+      name: a.name,
       tax_treatment: a.tax_treatment,
       tax_treatment_override: a.tax_treatment_override,
     })),

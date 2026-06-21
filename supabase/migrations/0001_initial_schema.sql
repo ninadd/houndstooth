@@ -21,6 +21,9 @@ create table public.profiles (
   id           uuid primary key references auth.users (id) on delete cascade,
   display_name text,
   timezone     text not null default 'America/Los_Angeles',
+  -- SnapTrade userSecret (encrypted at rest). The SnapTrade userId is auth.uid().
+  -- One secret per user; all brokerage authorizations hang off it.
+  snaptrade_user_secret_encrypted text,
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now()
 );
@@ -28,6 +31,11 @@ create table public.profiles (
 create trigger profiles_set_updated_at
   before update on public.profiles
   for each row execute function public.set_updated_at();
+
+-- The SnapTrade userSecret must never be readable by client roles; only the
+-- service-role key (which bypasses RLS) may read it for server-side sync.
+revoke select (snaptrade_user_secret_encrypted) on public.profiles
+  from anon, authenticated;
 
 -- Auto-create a profile row whenever a new auth user is created.
 create or replace function public.handle_new_user()
@@ -47,38 +55,36 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 
--- ---------- plaid_items ------------------------------------------------------
+-- ---------- connections ------------------------------------------------------
+-- One row per brokerage authorization (SnapTrade) the user has connected.
+-- The per-user userSecret lives on profiles; this table holds the per-brokerage
+-- authorization id and friendly institution name.
 
-create table public.plaid_items (
-  id                      uuid primary key default gen_random_uuid(),
-  user_id                 uuid not null references auth.users (id) on delete cascade,
-  plaid_item_id           text not null unique,
-  access_token_encrypted  text not null,
-  institution_id          text,
-  institution_name        text,
-  status                  text not null default 'active',
-  last_synced_at          timestamptz,
-  created_at              timestamptz not null default now(),
-  updated_at              timestamptz not null default now()
+create table public.connections (
+  id                uuid primary key default gen_random_uuid(),
+  user_id           uuid not null references auth.users (id) on delete cascade,
+  provider          text not null default 'snaptrade',
+  authorization_id  text not null unique,
+  institution_name  text,
+  status            text not null default 'active',
+  last_synced_at    timestamptz,
+  created_at        timestamptz not null default now(),
+  updated_at        timestamptz not null default now()
 );
 
-create index plaid_items_user_id_idx on public.plaid_items (user_id);
+create index connections_user_id_idx on public.connections (user_id);
 
-create trigger plaid_items_set_updated_at
-  before update on public.plaid_items
+create trigger connections_set_updated_at
+  before update on public.connections
   for each row execute function public.set_updated_at();
-
--- The encrypted access token must never be readable by client roles.
--- Only the service-role key (which bypasses RLS) may read/write it.
-revoke select (access_token_encrypted) on public.plaid_items from anon, authenticated;
 
 -- ---------- accounts ---------------------------------------------------------
 
 create table public.accounts (
   id                     uuid primary key default gen_random_uuid(),
   user_id                uuid not null references auth.users (id) on delete cascade,
-  item_id                uuid references public.plaid_items (id) on delete cascade,
-  plaid_account_id       text,
+  connection_id          uuid references public.connections (id) on delete cascade,
+  external_account_id    text,
   name                   text not null,
   official_name          text,
   type                   text,
@@ -100,10 +106,10 @@ create table public.accounts (
 );
 
 create index accounts_user_id_idx on public.accounts (user_id);
-create index accounts_item_id_idx on public.accounts (item_id);
-create unique index accounts_user_plaid_acct_uidx
-  on public.accounts (user_id, plaid_account_id)
-  where plaid_account_id is not null;
+create index accounts_connection_id_idx on public.accounts (connection_id);
+create unique index accounts_user_external_acct_uidx
+  on public.accounts (user_id, external_account_id)
+  where external_account_id is not null;
 
 create trigger accounts_set_updated_at
   before update on public.accounts
@@ -112,10 +118,10 @@ create trigger accounts_set_updated_at
 -- ---------- securities (reference) ------------------------------------------
 
 create table public.securities (
-  id                 uuid primary key default gen_random_uuid(),
-  user_id            uuid not null references auth.users (id) on delete cascade,
-  plaid_security_id  text,
-  ticker             text,
+  id                  uuid primary key default gen_random_uuid(),
+  user_id             uuid not null references auth.users (id) on delete cascade,
+  external_security_id text,
+  ticker              text,
   name               text,
   security_type      text,
   sector             text,
@@ -128,9 +134,9 @@ create table public.securities (
 );
 
 create index securities_user_id_idx on public.securities (user_id);
-create unique index securities_user_plaid_sec_uidx
-  on public.securities (user_id, plaid_security_id)
-  where plaid_security_id is not null;
+create unique index securities_user_external_sec_uidx
+  on public.securities (user_id, external_security_id)
+  where external_security_id is not null;
 
 create trigger securities_set_updated_at
   before update on public.securities
@@ -167,7 +173,7 @@ create table public.transactions (
   id                   uuid primary key default gen_random_uuid(),
   user_id              uuid not null references auth.users (id) on delete cascade,
   account_id           uuid not null references public.accounts (id) on delete cascade,
-  plaid_transaction_id text unique,
+  external_transaction_id text unique,
   amount               numeric(18, 2),
   date                 date,
   name                 text,
@@ -181,8 +187,8 @@ create index transactions_user_id_idx on public.transactions (user_id);
 create index transactions_account_id_idx on public.transactions (account_id);
 
 -- ---------- manual_assets ----------------------------------------------------
--- Home value + non-Plaid institutions (Solium Shareworks, Black Diamond 529)
--- and any manual debts.
+-- Home value + institutions SnapTrade can't reach (Solium Shareworks, Black
+-- Diamond 529) and any manual debts (mortgage, HELOC, credit cards).
 
 create table public.manual_assets (
   id          uuid primary key default gen_random_uuid(),
@@ -249,7 +255,7 @@ create unique index daily_summaries_user_date_uidx
 -- =============================================================================
 
 alter table public.profiles            enable row level security;
-alter table public.plaid_items         enable row level security;
+alter table public.connections         enable row level security;
 alter table public.accounts            enable row level security;
 alter table public.securities          enable row level security;
 alter table public.holdings            enable row level security;
@@ -270,7 +276,7 @@ declare
   t text;
 begin
   foreach t in array array[
-    'plaid_items', 'accounts', 'securities', 'holdings',
+    'connections', 'accounts', 'securities', 'holdings',
     'transactions', 'manual_assets', 'net_worth_snapshots', 'daily_summaries'
   ]
   loop
