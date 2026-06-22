@@ -69,9 +69,9 @@ function taxInfo(a: AccountRow): TaxInfo {
   }
   const treatment = a.tax_treatment_override ?? a.tax_treatment;
   if (treatment === "tax_advantaged") {
-    return { label: "Tax-advantaged", className: "text-chart-2", rank: 3 };
+    return { label: "Tax-advantaged", className: "text-gain", rank: 3 };
   }
-  return { label: "Taxable", className: "", rank: 2 };
+  return { label: "Taxable", className: "text-chart-2", rank: 2 };
 }
 
 export function AccountsTable({

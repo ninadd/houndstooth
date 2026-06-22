@@ -138,7 +138,7 @@ export async function generateDailySummary(
       model,
       snapshot_id: snapshot.id,
     },
-    { onConflict: "user_id,summary_date" },
+    { onConflict: "user_id" },
   );
   if (error) return { ok: false, reason: error.message };
 

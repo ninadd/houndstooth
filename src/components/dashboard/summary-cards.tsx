@@ -67,19 +67,19 @@ export function SummaryCards({ figures }: { figures: SnapshotFigures }) {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-muted">
-            <div className="h-full bg-chart-2" style={{ width: `${advPct}%` }} />
-            <div className="h-full bg-gain" style={{ width: `${100 - advPct}%` }} />
+            <div className="h-full bg-gain" style={{ width: `${advPct}%` }} />
+            <div className="h-full bg-chart-2" style={{ width: `${100 - advPct}%` }} />
           </div>
           <div className="space-y-1 text-sm">
             <Row
               label="Tax-advantaged"
               value={formatCurrency(tax_advantaged_total)}
-              dot="bg-chart-2"
+              dot="bg-gain"
             />
             <Row
               label="Taxable"
               value={formatCurrency(taxable_total)}
-              dot="bg-gain"
+              dot="bg-chart-2"
             />
           </div>
         </CardContent>
