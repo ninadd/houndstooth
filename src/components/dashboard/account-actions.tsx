@@ -5,7 +5,13 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
-export function AccountActions({ hasAccounts }: { hasAccounts: boolean }) {
+export function AccountActions({
+  hasAccounts,
+  syncOnly = false,
+}: {
+  hasAccounts: boolean;
+  syncOnly?: boolean;
+}) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
 
@@ -45,9 +51,11 @@ export function AccountActions({ hasAccounts }: { hasAccounts: boolean }) {
       <Button variant="outline" onClick={handleSync} disabled={busy}>
         Sync
       </Button>
-      <Button onClick={handleConnect} disabled={busy}>
-        {hasAccounts ? "Add account" : "Connect account"}
-      </Button>
+      {!syncOnly && (
+        <Button onClick={handleConnect} disabled={busy}>
+          {hasAccounts ? "Add account" : "Connect account"}
+        </Button>
+      )}
     </div>
   );
 }

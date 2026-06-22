@@ -129,3 +129,22 @@ export function isDebtType(type: string | null | undefined): boolean {
   const t = normalize(type);
   return t === "loan" || t === "credit";
 }
+
+/**
+ * True for cash accounts (checking/savings/deposit). These don't fit the
+ * investment-style taxable/tax-advantaged split, so the UI shows "N/A" instead.
+ */
+export function isCashType(
+  type: string | null | undefined,
+  subtype?: string | null | undefined,
+): boolean {
+  const t = normalize(type);
+  const sub = normalize(subtype);
+  return (
+    t === "deposit" ||
+    t === "cash" ||
+    sub === "checking" ||
+    sub === "savings" ||
+    sub === "cash"
+  );
+}

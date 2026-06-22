@@ -16,10 +16,13 @@ export function TopNav({ email }: { email: string }) {
   return (
     <header className="sticky top-0 z-20 border-b border-border bg-background/80 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4 sm:px-6">
-        <div className="flex items-center gap-2">
+        <Link
+          href="/"
+          className="flex items-center gap-2 rounded-md outline-none ring-ring focus-visible:ring-2"
+        >
           <HoundstoothLogo className="size-8 text-primary" />
           <span className="text-xl font-semibold tracking-tight">Houndstooth</span>
-        </div>
+        </Link>
 
         <DropdownMenu>
           <DropdownMenuTrigger className="flex size-8 items-center justify-center rounded-full bg-muted text-sm font-medium text-foreground outline-none ring-ring focus-visible:ring-2">
@@ -35,6 +38,13 @@ export function TopNav({ email }: { email: string }) {
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 render={
+                  <Link href="/accounts" className="w-full cursor-pointer" />
+                }
+              >
+                Accounts
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                render={
                   <Link
                     href="/account/security"
                     className="w-full cursor-pointer"
@@ -46,6 +56,7 @@ export function TopNav({ email }: { email: string }) {
               <DropdownMenuSeparator />
               <form action="/auth/signout" method="post">
                 <DropdownMenuItem
+                  nativeButton
                   render={
                     <button type="submit" className="w-full cursor-pointer" />
                   }
