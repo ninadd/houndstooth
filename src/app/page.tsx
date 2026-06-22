@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { AccountActions } from "@/components/dashboard/account-actions";
 import { TopNav } from "@/components/dashboard/top-nav";
 import { HeroCharts, type HeroPoint } from "@/components/dashboard/hero-charts";
 import { SummaryCards } from "@/components/dashboard/summary-cards";
@@ -7,7 +8,6 @@ import {
   ManualAssetsCard,
   type ManualAsset,
 } from "@/components/dashboard/manual-assets";
-import { AccountActions } from "@/components/dashboard/account-actions";
 import {
   AccountsTable,
   type AccountRow,
@@ -41,7 +41,7 @@ export default async function DashboardPage() {
     supabase
       .from("accounts")
       .select(
-        "id, name, official_name, type, subtype, tax_treatment, tax_treatment_override, is_debt, current_balance, mask, connections(institution_name)",
+        "id, name, custom_name, official_name, type, subtype, tax_treatment, tax_treatment_override, is_debt, current_balance, mask, connections(institution_name)",
       )
       .order("current_balance", { ascending: false, nullsFirst: false }),
     supabase
@@ -71,6 +71,7 @@ export default async function DashboardPage() {
     return {
       id: a.id,
       name: a.name,
+      custom_name: a.custom_name ?? null,
       official_name: a.official_name,
       type: a.type,
       subtype: a.subtype,
@@ -145,7 +146,7 @@ export default async function DashboardPage() {
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold tracking-tight">Accounts</h2>
-            <AccountActions hasAccounts={hasAccounts} />
+            <AccountActions hasAccounts={hasAccounts} syncOnly />
           </div>
 
           {hasAccounts ? (
