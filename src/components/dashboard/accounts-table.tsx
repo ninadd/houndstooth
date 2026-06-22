@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -78,11 +79,15 @@ export function AccountsTable({
   accounts,
   showBalance = true,
   editable = false,
+  linkRows = false,
 }: {
   accounts: AccountRow[];
   showBalance?: boolean;
   editable?: boolean;
+  /** Navigate to the account's detail page when a row is clicked. */
+  linkRows?: boolean;
 }) {
+  const router = useRouter();
   const [sort, setSort] = useState<{ column: SortColumn; dir: SortDir }>(() => ({
     column: showBalance ? "balance" : "account",
     dir: showBalance ? "desc" : "asc",
@@ -124,9 +129,12 @@ export function AccountsTable({
     return rows;
   }, [accounts, sort]);
 
+  // Equal-width data columns on desktop (Account/Type/Tax, plus Balance when shown).
+  const colWidth = showBalance ? "sm:w-1/4" : "sm:w-1/3";
+
   return (
     <div className="rounded-xl border border-border">
-      <Table>
+      <Table className="sm:table-fixed">
         <TableHeader>
           <TableRow>
             <SortHeader
@@ -134,20 +142,21 @@ export function AccountsTable({
               label="Account"
               sort={sort}
               onSort={toggleSort}
+              className={colWidth}
             />
             <SortHeader
               column="type"
               label="Type"
               sort={sort}
               onSort={toggleSort}
-              className="hidden sm:table-cell"
+              className={cn("hidden sm:table-cell", colWidth)}
             />
             <SortHeader
               column="tax"
               label="Tax"
               sort={sort}
               onSort={toggleSort}
-              className="hidden sm:table-cell"
+              className={cn("hidden sm:table-cell", colWidth)}
             />
             {showBalance && (
               <SortHeader
@@ -156,6 +165,7 @@ export function AccountsTable({
                 sort={sort}
                 onSort={toggleSort}
                 align="right"
+                className={colWidth}
               />
             )}
             {editable && <TableHead className="w-10" />}
@@ -166,9 +176,29 @@ export function AccountsTable({
             const tax = taxInfo(a);
             const balance = a.current_balance ?? 0;
             return (
-              <TableRow key={a.id}>
+              <TableRow
+                key={a.id}
+                onClick={
+                  linkRows
+                    ? (e) => {
+                        if ((e.target as HTMLElement).closest("a, button")) return;
+                        router.push(`/accounts/${a.id}`);
+                      }
+                    : undefined
+                }
+                className={linkRows ? "cursor-pointer hover:bg-muted/50" : undefined}
+              >
                 <TableCell className="w-full max-w-0">
-                  <div className="truncate font-medium">{displayName(a)}</div>
+                  {linkRows ? (
+                    <Link
+                      href={`/accounts/${a.id}`}
+                      className="block truncate font-medium hover:underline"
+                    >
+                      {displayName(a)}
+                    </Link>
+                  ) : (
+                    <div className="truncate font-medium">{displayName(a)}</div>
+                  )}
                   <div className="truncate text-xs text-muted-foreground">
                     {a.institution_name ?? "—"}
                     {a.mask ? ` ••${a.mask}` : ""}

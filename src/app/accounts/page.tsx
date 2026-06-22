@@ -7,6 +7,7 @@ import {
   AccountsTable,
   type AccountRow,
 } from "@/components/dashboard/accounts-table";
+import { DailySummaryProvider } from "@/components/dashboard/daily-summary-context";
 import { Card, CardContent } from "@/components/ui/card";
 
 export default async function AccountsPage() {
@@ -49,34 +50,36 @@ export default async function AccountsPage() {
   const hasAccounts = accounts.length > 0;
 
   return (
-    <div className="min-h-screen">
-      <TopNav email={user.email ?? "account"} />
+    <DailySummaryProvider summary={null}>
+      <div className="min-h-screen">
+        <TopNav email={user.email ?? "account"} />
 
-      <main className="mx-auto max-w-5xl space-y-6 px-4 py-8 sm:px-6">
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <Link
-              href="/"
-              className="text-sm text-muted-foreground hover:text-foreground"
-            >
-              ← Dashboard
-            </Link>
-            <h1 className="text-2xl font-semibold tracking-tight">Accounts</h1>
+        <main className="mx-auto max-w-5xl space-y-6 px-4 py-8 sm:px-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <Link
+                href="/"
+                className="text-sm text-muted-foreground hover:text-foreground"
+              >
+                ← Dashboard
+              </Link>
+              <h1 className="text-2xl font-semibold tracking-tight">Accounts</h1>
+            </div>
+            <AccountActions hasAccounts={hasAccounts} />
           </div>
-          <AccountActions hasAccounts={hasAccounts} />
-        </div>
 
-        {hasAccounts ? (
-          <AccountsTable accounts={accounts} showBalance={false} editable />
-        ) : (
-          <Card className="border-dashed">
-            <CardContent className="py-10 text-center text-sm text-muted-foreground">
-              No accounts yet. Connect a brokerage with SnapTrade to pull in
-              balances and holdings.
-            </CardContent>
-          </Card>
-        )}
-      </main>
-    </div>
+          {hasAccounts ? (
+            <AccountsTable accounts={accounts} showBalance={false} editable />
+          ) : (
+            <Card className="border-dashed">
+              <CardContent className="py-10 text-center text-sm text-muted-foreground">
+                No accounts yet. Connect a brokerage with SnapTrade to pull in
+                balances and holdings.
+              </CardContent>
+            </Card>
+          )}
+        </main>
+      </div>
+    </DailySummaryProvider>
   );
 }
