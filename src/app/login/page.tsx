@@ -39,6 +39,7 @@ export default function LoginPage() {
       return;
     }
 
+    // The middleware decides whether MFA (or a trusted-device skip) is needed.
     router.replace("/");
     router.refresh();
   }
