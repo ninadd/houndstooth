@@ -57,6 +57,14 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse;
   }
 
+  // Server Actions POST to the current page path. If middleware redirects one,
+  // the browser receives the redirect instead of the action result and throws
+  // "An unexpected response was received from the server." Let them through —
+  // each action enforces its own auth.
+  if (request.headers.get("next-action")) {
+    return supabaseResponse;
+  }
+
   const isPublic = PUBLIC_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`),
   );
