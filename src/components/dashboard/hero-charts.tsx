@@ -25,10 +25,19 @@ export type HeroPoint = {
 };
 
 type Metric = "netWorth" | "investments";
-type RangeKey = "1W" | "1M" | "3M" | "YTD" | "1Y" | "5Y" | "10Y" | "ALL";
+type RangeKey = "1D" | "1W" | "1M" | "3M" | "YTD" | "1Y" | "5Y" | "10Y" | "ALL";
 
-/** `cutoff` returns the earliest YYYY-MM-DD to include, or null for all time. */
-type RangeDef = { key: RangeKey; label: string; cutoff: (now: Date) => string | null };
+/**
+ * `cutoff` returns the earliest YYYY-MM-DD to include, or null for all time.
+ * `tail`, when set, instead takes the last N snapshots regardless of date — used
+ * by 1D to compare the prior close to the latest close even across weekend gaps.
+ */
+type RangeDef = {
+  key: RangeKey;
+  label: string;
+  cutoff: (now: Date) => string | null;
+  tail?: number;
+};
 
 function minusDays(now: Date, days: number): string {
   const d = new Date(now);
@@ -43,6 +52,7 @@ function minusYears(now: Date, years: number): string {
 }
 
 const RANGES: RangeDef[] = [
+  { key: "1D", label: "since prior close", cutoff: () => null, tail: 2 },
   { key: "1W", label: "past week", cutoff: (n) => minusDays(n, 7) },
   { key: "1M", label: "past month", cutoff: (n) => minusDays(n, 30) },
   { key: "3M", label: "past 3 months", cutoff: (n) => minusDays(n, 90) },
@@ -120,15 +130,15 @@ export function HeroCharts({
         />
       </div>
 
-      {/* Shared range control */}
-      <div className="flex flex-wrap justify-center gap-1 lg:justify-start">
+      {/* Shared range control — scrolls horizontally on mobile, wraps off */}
+      <div className="-mx-4 flex gap-1 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:flex-wrap sm:justify-center sm:px-0 lg:justify-start">
         {RANGES.map((r) => (
           <button
             key={r.key}
             onClick={() => setRange(r.key)}
             disabled={series.length === 0}
             className={cn(
-              "rounded-full px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-40",
+              "shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-40",
               range === r.key
                 ? "bg-muted text-foreground"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -160,7 +170,11 @@ function ChartPanel({
   const data = useMemo(() => {
     if (series.length === 0) return [];
     const cutoff = rangeDef.cutoff(new Date());
-    let pts = cutoff === null ? series : series.filter((p) => p.date >= cutoff);
+    let pts = rangeDef.tail
+      ? series.slice(-rangeDef.tail)
+      : cutoff === null
+        ? series
+        : series.filter((p) => p.date >= cutoff);
     // Fall back to the most recent points if the range has too few.
     if (pts.length < 2) pts = series.slice(-2);
     // A single snapshot: duplicate it so a flat line + point is visible.
