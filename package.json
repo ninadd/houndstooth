@@ -2,6 +2,8 @@
   "name": "houndstooth",
   "version": "0.1.0",
   "private": true,
+  "description": "Self-hosted net-worth & investment tracker (Next.js + Supabase + SnapTrade + Gemini).",
+  "license": "MIT",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

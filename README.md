@@ -1,13 +1,50 @@
 # Houndstooth
 
-Personal net-worth & investment tracker. Aggregates accounts across institutions,
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+Self-hosted net-worth & investment tracker. Aggregates accounts across institutions,
 separates taxable vs tax-advantaged holdings, charts Net Worth and Investments over
 time ("Time Machine"), and generates a privacy-preserving daily AI market summary.
 
 **Stack:** Next.js (App Router) · Supabase (Postgres + Auth + RLS) · SnapTrade · Gemini ·
 Tailwind v4 + shadcn/ui · Recharts. Deployed on Vercel.
 
-See `.claude/plans/role-you-are-an-kind-blossom.md` for the full architecture & roadmap.
+> **Self-hosting:** Houndstooth is single-user by design — you run your **own** instance
+> with your **own** Supabase project and API keys (Gemini, SnapTrade). Nothing is shared
+> with anyone else. See [CONTRIBUTING.md](CONTRIBUTING.md) to hack on it.
+
+## Quick start (mock mode — no credentials needed)
+
+Try the full UI with mock data, before wiring up any external services:
+
+```bash
+git clone <your-fork-url> houndstooth && cd houndstooth
+npm install
+cp .env.example .env.local        # set DATA_PROVIDER=mock in it
+npm run dev                        # http://localhost:3000
+```
+
+In `.env.local`, set `DATA_PROVIDER=mock`. You can leave the SnapTrade/Gemini values
+blank in mock mode. (Supabase auth is still required for login — see Full setup.)
+
+## Environment variables
+
+Copy `.env.example` → `.env.local` and fill these in. The same variables are set in your
+Vercel project for deployment.
+
+| Variable | Scope | Required | Where to get it |
+| --- | --- | --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | public | yes | Supabase → Project Settings → API |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | public | yes | Supabase → Project Settings → API |
+| `SUPABASE_SERVICE_ROLE_KEY` | server-only | yes | Supabase → Project Settings → API (bypasses RLS — never expose) |
+| `DATA_PROVIDER` | server | yes | `mock` (no creds) or `snaptrade` (live) |
+| `SNAPTRADE_CLIENT_ID` | server-only | live only | SnapTrade Dashboard → API Keys |
+| `SNAPTRADE_CONSUMER_KEY` | server-only | live only | SnapTrade Dashboard → API Keys |
+| `SNAPTRADE_USER_ID` | server-only | live only | SnapTrade Dashboard → Settings → Security |
+| `SNAPTRADE_USER_SECRET` | server-only | live only | SnapTrade Dashboard → Settings → Security |
+| `GEMINI_API_KEY` | server-only | AI summary | Google AI Studio (enable Search grounding) |
+| `CRON_SECRET` | server-only | deploy only | Any random string; set in Vercel for cron auth |
+| `MFA_TRUST_SECRET` | server-only | recommended | `node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"` |
 
 ## Milestone 1 status — Foundation ✅
 
@@ -86,27 +123,42 @@ Brokerages are connected through SnapTrade's hosted Connection Portal. The flow:
 3. SnapTrade Dashboard → **Webhooks** → point the listener at
    `https://<your-domain>/api/snaptrade/webhook` (deployed only).
 
-## Local setup
+## Full setup (live data)
 
 1. **Create a Supabase project**, then copy its URL + keys into `.env.local`:
    - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `SUPABASE_SERVICE_ROLE_KEY` (Settings → API)
 
-2. **Set the SnapTrade credentials** (see the SnapTrade connection flow section above):
-   `SNAPTRADE_CLIENT_ID`, `SNAPTRADE_CONSUMER_KEY`, `SNAPTRADE_USER_ID`, `SNAPTRADE_USER_SECRET`.
+2. **Apply the schema.** Run every file in `supabase/migrations/` **in order**
+   (`0001` → `0002` → `0003` → `0004`), either by pasting each into the Supabase SQL
+   editor or via the Supabase CLI (`supabase db push`).
 
-3. **Apply the schema.** Either paste `supabase/migrations/0001_initial_schema.sql`
-   into the Supabase SQL editor, or use the Supabase CLI (`supabase db push`).
-
-4. **Create your single user** in Supabase → Authentication → Users → "Add user"
+3. **Create your single user** in Supabase → Authentication → Users → "Add user"
    (email + password). The `on_auth_user_created` trigger creates the profile row.
 
-5. **Run it:**
+4. **Set the SnapTrade credentials** (see the SnapTrade connection flow section above):
+   `SNAPTRADE_CLIENT_ID`, `SNAPTRADE_CONSUMER_KEY`, `SNAPTRADE_USER_ID`, `SNAPTRADE_USER_SECRET`,
+   and set `DATA_PROVIDER=snaptrade`.
+
+5. **Set `GEMINI_API_KEY`** for the daily AI summary (optional; enable Google Search
+   grounding for the key).
+
+6. **Run it:**
    ```bash
    npm run dev      # http://localhost:3000  → redirects to /login
    npm test         # unit tests (adapter mapping, webhook, classification, …)
    npm run build    # production build
    ```
+
+## Deploy to Vercel
+
+1. Import the repo into Vercel.
+2. Set **all** the [environment variables](#environment-variables) in the Vercel project
+   (including `CRON_SECRET` for the daily cron and `MFA_TRUST_SECRET`).
+3. Cron is configured in [vercel.json](vercel.json) (two weekday runs; the handler gates
+   on PT wall-clock). Vercel Hobby allows exactly the 2 daily jobs used here.
+4. After deploying, point your **SnapTrade webhook** at
+   `https://<your-domain>/api/snaptrade/webhook` (webhooks can't reach `localhost`).
 
 ## Conventions
 
