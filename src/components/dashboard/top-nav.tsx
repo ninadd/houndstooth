@@ -3,6 +3,7 @@ import { HoundstoothLogo } from "@/components/houndstooth-logo";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -25,30 +26,34 @@ export function TopNav({ email }: { email: string }) {
             {initial}
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel className="truncate font-normal text-muted-foreground">
-              {email}
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              render={
-                <Link
-                  href="/account/security"
-                  className="w-full cursor-pointer"
-                />
-              }
-            >
-              Security
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <form action="/auth/signout" method="post">
+            {/* DropdownMenuLabel maps to Base UI's Menu.GroupLabel, which must
+                live inside a Group — otherwise opening the menu throws. */}
+            <DropdownMenuGroup>
+              <DropdownMenuLabel className="truncate font-normal text-muted-foreground">
+                {email}
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
               <DropdownMenuItem
                 render={
-                  <button type="submit" className="w-full cursor-pointer" />
+                  <Link
+                    href="/account/security"
+                    className="w-full cursor-pointer"
+                  />
                 }
               >
-                Sign out
+                Security
               </DropdownMenuItem>
-            </form>
+              <DropdownMenuSeparator />
+              <form action="/auth/signout" method="post">
+                <DropdownMenuItem
+                  render={
+                    <button type="submit" className="w-full cursor-pointer" />
+                  }
+                >
+                  Sign out
+                </DropdownMenuItem>
+              </form>
+            </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

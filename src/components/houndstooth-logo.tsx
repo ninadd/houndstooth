@@ -11,10 +11,13 @@ export function HoundstoothLogo({ className }: { className?: string }) {
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
     >
-      <path
-        d="m279.21 493.07 427.72-427.72v213.86l-213.86 213.86h213.86v213.86l213.86-213.86h213.86l-427.72 427.72h-213.86l-213.86 213.86v-213.86h-213.86l213.86-213.86z"
-        fillRule="evenodd"
-      />
+      {/* Mirrored horizontally and vertically (flip both axes about center). */}
+      <g transform="translate(1200, 1200) scale(-1, -1)">
+        <path
+          d="m279.21 493.07 427.72-427.72v213.86l-213.86 213.86h213.86v213.86l213.86-213.86h213.86l-427.72 427.72h-213.86l-213.86 213.86v-213.86h-213.86l213.86-213.86z"
+          fillRule="evenodd"
+        />
+      </g>
     </svg>
   );
 }
