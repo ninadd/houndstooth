@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { HoundstoothLogo } from "@/components/houndstooth-logo";
 import {
   DropdownMenu,
@@ -27,6 +28,17 @@ export function TopNav({ email }: { email: string }) {
             <DropdownMenuLabel className="truncate font-normal text-muted-foreground">
               {email}
             </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              render={
+                <Link
+                  href="/account/security"
+                  className="w-full cursor-pointer"
+                />
+              }
+            >
+              Security
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <form action="/auth/signout" method="post">
               <DropdownMenuItem
