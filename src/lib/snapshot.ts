@@ -105,7 +105,8 @@ export function pacificDate(date = new Date()): string {
 
 /**
  * Compute the current figures for a user and upsert today's row in
- * net_worth_snapshots (one row per user per PT day). Returns the figures.
+ * net_worth_snapshots (one row per user per PT day), plus one row per account
+ * in account_balances for the per-account detail charts. Returns the figures.
  */
 export async function computeAndStoreSnapshot(
   userId: string,
@@ -116,7 +117,7 @@ export async function computeAndStoreSnapshot(
     admin
       .from("accounts")
       .select(
-        "current_balance, is_debt, type, subtype, name, tax_treatment, tax_treatment_override",
+        "id, current_balance, is_debt, type, subtype, name, tax_treatment, tax_treatment_override",
       )
       .eq("user_id", userId),
     admin
@@ -152,6 +153,19 @@ export async function computeAndStoreSnapshot(
     { onConflict: "user_id,snapshot_date" },
   );
   if (error) throw error;
+
+  const balanceRows = (accounts ?? []).map((a) => ({
+    user_id: userId,
+    account_id: a.id as string,
+    balance_date: pacificDate(),
+    balance: a.current_balance == null ? 0 : Number(a.current_balance),
+  }));
+  if (balanceRows.length > 0) {
+    const { error: balanceError } = await admin
+      .from("account_balances")
+      .upsert(balanceRows, { onConflict: "account_id,balance_date" });
+    if (balanceError) throw balanceError;
+  }
 
   return figures;
 }

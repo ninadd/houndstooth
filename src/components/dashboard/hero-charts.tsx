@@ -24,6 +24,13 @@ export type HeroPoint = {
   investments: number;
 };
 
+/** A single-series point, e.g. one account's value over time. */
+export type SinglePoint = {
+  /** YYYY-MM-DD (PT) date. */
+  date: string;
+  value: number;
+};
+
 type Metric = "netWorth" | "investments";
 type RangeKey = "1D" | "1W" | "1M" | "3M" | "YTD" | "1Y" | "5Y" | "10Y" | "ALL";
 
@@ -75,7 +82,7 @@ export function HeroCharts({
   series: HeroPoint[];
   latest: { netWorth: number; investments: number };
 }) {
-  const [range, setRange] = useState<RangeKey>("1M");
+  const [range, setRange] = useState<RangeKey>("1D");
   const [activeMetric, setActiveMetric] = useState<Metric>("netWorth");
   const rangeDef = RANGES.find((r) => r.key === range)!;
 
@@ -104,7 +111,7 @@ export function HeroCharts({
         </div>
         <ChartPanel
           title={METRICS.find((m) => m.key === activeMetric)!.title}
-          metric={activeMetric}
+          dataKey={activeMetric}
           series={series}
           current={latest[activeMetric]}
           rangeDef={rangeDef}
@@ -116,14 +123,14 @@ export function HeroCharts({
       <div className="hidden gap-6 lg:grid lg:grid-cols-2">
         <ChartPanel
           title="Net Worth"
-          metric="netWorth"
+          dataKey="netWorth"
           series={series}
           current={latest.netWorth}
           rangeDef={rangeDef}
         />
         <ChartPanel
           title="Investments"
-          metric="investments"
+          dataKey="investments"
           series={series}
           current={latest.investments}
           rangeDef={rangeDef}
@@ -152,17 +159,61 @@ export function HeroCharts({
   );
 }
 
-function ChartPanel({
+/** Single-series hero chart for one account's value over time. */
+export function SingleHeroChart({
+  series,
+  current,
   title,
-  metric,
+}: {
+  series: SinglePoint[];
+  current: number;
+  title: string;
+}) {
+  const [range, setRange] = useState<RangeKey>("1D");
+  const rangeDef = RANGES.find((r) => r.key === range)!;
+
+  return (
+    <section className="w-full space-y-4">
+      <ChartPanel
+        title={title}
+        dataKey="value"
+        series={series}
+        current={current}
+        rangeDef={rangeDef}
+      />
+
+      <div className="-mx-4 flex gap-1 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:flex-wrap sm:justify-center sm:px-0">
+        {RANGES.map((r) => (
+          <button
+            key={r.key}
+            onClick={() => setRange(r.key)}
+            disabled={series.length === 0}
+            className={cn(
+              "shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-40",
+              range === r.key
+                ? "bg-muted text-foreground"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground",
+            )}
+          >
+            {r.key}
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ChartPanel<P extends { date: string }>({
+  title,
+  dataKey,
   series,
   current,
   rangeDef,
   showTitle = true,
 }: {
   title: string;
-  metric: Metric;
-  series: HeroPoint[];
+  dataKey: string;
+  series: P[];
   current: number;
   rangeDef: RangeDef;
   showTitle?: boolean;
@@ -191,12 +242,12 @@ function ChartPanel({
     const maxTs = Math.max(...tsValues);
     return buildTimeAxis(minTs, maxTs);
   }, [data, hasData]);
-  const first = hasData ? data[0][metric] : current;
+  const first = hasData ? Number((data[0] as Record<string, unknown>)[dataKey]) : current;
   const change = current - first;
   const pct = first !== 0 ? (change / first) * 100 : 0;
   const positive = change >= 0;
   const lineColor = positive ? "var(--gain)" : "var(--loss)";
-  const gradientId = `fill-${metric}`;
+  const gradientId = `fill-${dataKey}`;
   const showDots = data.length <= 31;
 
   return (
@@ -247,11 +298,11 @@ function ChartPanel({
               <ReferenceLine y={first} stroke="var(--border)" strokeDasharray="4 4" />
               <Tooltip
                 cursor={{ stroke: "var(--muted-foreground)", strokeWidth: 1 }}
-                content={<HeroTooltip metric={metric} />}
+                content={<HeroTooltip dataKey={dataKey} />}
               />
               <Area
                 type="monotone"
-                dataKey={metric}
+                dataKey={dataKey}
                 stroke={lineColor}
                 strokeWidth={2}
                 fill={`url(#${gradientId})`}
@@ -392,18 +443,18 @@ function AxisTick({
 function HeroTooltip({
   active,
   payload,
-  metric,
+  dataKey,
 }: {
   active?: boolean;
-  payload?: { payload: HeroPoint }[];
-  metric: Metric;
+  payload?: { payload: { date: string } & Record<string, unknown> }[];
+  dataKey: string;
 }) {
   if (!active || !payload?.length) return null;
   const point = payload[0].payload;
   return (
     <div className="rounded-md border border-border bg-popover px-3 py-2 text-xs shadow-md">
       <div className="font-semibold tabular-nums">
-        {formatCurrency(point[metric], { cents: true })}
+        {formatCurrency(Number(point[dataKey]), { cents: true })}
       </div>
       <div className="mt-0.5 text-muted-foreground">
         {new Date(`${point.date}T00:00:00`).toLocaleDateString("en-US", {

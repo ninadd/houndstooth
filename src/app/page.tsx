@@ -152,7 +152,7 @@ export default async function DashboardPage() {
             </div>
 
             {hasAccounts ? (
-              <AccountsTable accounts={accounts} />
+              <AccountsTable accounts={accounts} linkRows />
             ) : (
               <Card className="border-dashed">
                 <CardContent className="py-10 text-center text-sm text-muted-foreground">
