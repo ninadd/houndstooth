@@ -130,8 +130,8 @@ Brokerages are connected through SnapTrade's hosted Connection Portal. The flow:
    - `SUPABASE_SERVICE_ROLE_KEY` (Settings → API)
 
 2. **Apply the schema.** Run every file in `supabase/migrations/` **in order**
-   (`0001` → `0002` → `0003` → `0004`), either by pasting each into the Supabase SQL
-   editor or via the Supabase CLI (`supabase db push`).
+   (`0001` → `0002` → `0003` → `0004` → `0005`), either by pasting each into the
+   Supabase SQL editor or via the Supabase CLI (`supabase db push`).
 
 3. **Create your single user** in Supabase → Authentication → Users → "Add user"
    (email + password). The `on_auth_user_created` trigger creates the profile row.
