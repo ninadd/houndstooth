@@ -36,6 +36,10 @@ import { formatCurrency } from "@/lib/format";
 import { formatAccountType } from "@/lib/account-type";
 import { isCashType } from "@/lib/tax-classification";
 import { renameAccount } from "@/lib/actions/accounts";
+import {
+  ManualAccountEditDialog,
+  type ManualAccountRow,
+} from "@/components/dashboard/manual-account-dialog";
 
 export type AccountRow = {
   id: string;
@@ -50,6 +54,8 @@ export type AccountRow = {
   current_balance: number | null;
   mask: string | null;
   institution_name: string | null;
+  is_manual: boolean;
+  manual_category: "property" | "debt" | "investment" | null;
 };
 
 type SortColumn = "account" | "type" | "tax" | "balance";
@@ -62,10 +68,10 @@ function displayName(a: AccountRow): string {
 
 type TaxInfo = { label: string; className: string; rank: number };
 
-/** Resolve the Tax badge: Debt for liabilities, N/A for cash, else the split. */
+/** Resolve the Tax badge: Debt for liabilities, N/A for cash/property, else the split. */
 function taxInfo(a: AccountRow): TaxInfo {
   if (a.is_debt) return { label: "Debt", className: "text-loss", rank: 0 };
-  if (isCashType(a.type, a.subtype)) {
+  if (a.manual_category === "property" || isCashType(a.type, a.subtype)) {
     return { label: "N/A", className: "text-muted-foreground", rank: 1 };
   }
   const treatment = a.tax_treatment_override ?? a.tax_treatment;
@@ -73,6 +79,21 @@ function taxInfo(a: AccountRow): TaxInfo {
     return { label: "Tax-advantaged", className: "text-gain", rank: 3 };
   }
   return { label: "Taxable", className: "text-chart-2", rank: 2 };
+}
+
+/** Resolve the Type column: manual accounts use their explicit category, else the
+ *  existing subtype/type heuristics for synced broker accounts. */
+function typeLabel(a: AccountRow): string {
+  switch (a.manual_category) {
+    case "property":
+      return "Property";
+    case "debt":
+      return "Other";
+    case "investment":
+      return "Investment";
+    default:
+      return formatAccountType(a.type, a.subtype, a.name);
+  }
 }
 
 export function AccountsTable({
@@ -111,9 +132,7 @@ export function AccountsTable({
           cmp = displayName(a).localeCompare(displayName(b));
           break;
         case "type":
-          cmp = formatAccountType(a.type, a.subtype, a.name).localeCompare(
-            formatAccountType(b.type, b.subtype, b.name),
-          );
+          cmp = typeLabel(a).localeCompare(typeLabel(b));
           break;
         case "tax":
           cmp = taxInfo(a).rank - taxInfo(b).rank;
@@ -200,12 +219,18 @@ export function AccountsTable({
                     <div className="truncate font-medium">{displayName(a)}</div>
                   )}
                   <div className="truncate text-xs text-muted-foreground">
-                    {a.institution_name ?? "—"}
-                    {a.mask ? ` ••${a.mask}` : ""}
+                    {a.is_manual ? (
+                      "Manually added"
+                    ) : (
+                      <>
+                        {a.institution_name ?? "—"}
+                        {a.mask ? ` ••${a.mask}` : ""}
+                      </>
+                    )}
                   </div>
                 </TableCell>
                 <TableCell className="hidden text-sm text-muted-foreground sm:table-cell">
-                  {formatAccountType(a.type, a.subtype, a.name)}
+                  {typeLabel(a)}
                 </TableCell>
                 <TableCell className="hidden sm:table-cell">
                   <Badge variant="outline" className={tax.className}>
@@ -222,7 +247,11 @@ export function AccountsTable({
                 )}
                 {editable && (
                   <TableCell className="text-right">
-                    <RenameDialog account={a} />
+                    {a.is_manual ? (
+                      <ManualAccountEditDialog account={a as ManualAccountRow} />
+                    ) : (
+                      <RenameDialog account={a} />
+                    )}
                   </TableCell>
                 )}
               </TableRow>

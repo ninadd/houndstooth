@@ -52,8 +52,8 @@ export function SummaryCards({ figures }: { figures: SnapshotFigures }) {
             {formatCurrency(investable_assets)}
           </div>
           <div className="space-y-1 text-sm">
-            <Row label="Investments" value={formatCurrency(investable_assets)} />
-            <Row label="Home value" value={formatCurrency(home_value)} />
+            <Row label="Total assets" value={formatCurrency(total_assets)} />
+            <Row label="Property" value={`−${formatCurrency(home_value)}`} />
           </div>
         </CardContent>
       </Card>

@@ -1,10 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import {
-  computeNetWorth,
-  pacificDate,
-  type SnapshotAccount,
-  type SnapshotManualAsset,
-} from "@/lib/snapshot";
+import { computeNetWorth, pacificDate, type SnapshotAccount } from "@/lib/snapshot";
 
 const DAY_MS = 86_400_000;
 
@@ -39,18 +34,12 @@ export async function backfillSnapshots(
 ): Promise<{ inserted: number }> {
   const admin = createAdminClient();
 
-  const [{ data: accounts }, { data: manualAssets }] = await Promise.all([
-    admin
-      .from("accounts")
-      .select(
-        "current_balance, is_debt, type, subtype, name, tax_treatment, tax_treatment_override",
-      )
-      .eq("user_id", userId),
-    admin
-      .from("manual_assets")
-      .select("value, is_debt, asset_class, tax_treatment")
-      .eq("user_id", userId),
-  ]);
+  const { data: accounts } = await admin
+    .from("accounts")
+    .select(
+      "current_balance, is_debt, type, subtype, name, tax_treatment, tax_treatment_override, manual_category",
+    )
+    .eq("user_id", userId);
 
   const figures = computeNetWorth(
     (accounts ?? []).map(
@@ -63,14 +52,7 @@ export async function backfillSnapshots(
         name: a.name,
         tax_treatment: a.tax_treatment,
         tax_treatment_override: a.tax_treatment_override,
-      }),
-    ),
-    (manualAssets ?? []).map(
-      (m): SnapshotManualAsset => ({
-        value: Number(m.value),
-        is_debt: m.is_debt,
-        asset_class: m.asset_class,
-        tax_treatment: m.tax_treatment,
+        manual_category: a.manual_category,
       }),
     ),
   );

@@ -12,13 +12,7 @@ export type SnapshotAccount = {
   name?: string | null;
   tax_treatment: TaxTreatment;
   tax_treatment_override: TaxTreatment | null;
-};
-
-export type SnapshotManualAsset = {
-  value: number;
-  is_debt: boolean;
-  asset_class: "real_estate" | "equity_comp" | "529" | "other";
-  tax_treatment: TaxTreatment;
+  manual_category?: "property" | "debt" | "investment" | null;
 };
 
 export type SnapshotFigures = {
@@ -40,13 +34,11 @@ function round2(n: number): number {
  *
  *   net_worth         = total_assets − total_debts
  *   investable_assets = total_assets − home_value
- *   taxable + tax_advantaged = investable_assets   (real estate excluded
- *                                                    from the tax split)
+ *   taxable + tax_advantaged = investable_assets   (real estate / manual
+ *                                                    property excluded from
+ *                                                    the tax split)
  */
-export function computeNetWorth(
-  accounts: SnapshotAccount[],
-  manualAssets: SnapshotManualAsset[],
-): SnapshotFigures {
+export function computeNetWorth(accounts: SnapshotAccount[]): SnapshotFigures {
   let totalAssets = 0;
   let totalDebts = 0;
   let homeValue = 0;
@@ -56,29 +48,31 @@ export function computeNetWorth(
   for (const acct of accounts) {
     const balance = acct.current_balance ?? 0;
     if (acct.is_debt) {
-      totalDebts += balance;
+      // Brokerages don't agree on sign for liability balances (e.g. a credit
+      // card can report a negative `current_balance`); the UI always shows
+      // debts as a positive magnitude (accounts-table.tsx), so match that
+      // convention here rather than letting a negative balance silently
+      // subtract from total debt.
+      totalDebts += Math.abs(balance);
       continue;
     }
     totalAssets += balance;
-    if (effectiveTaxTreatment(acct) === "tax_advantaged") {
+    if (acct.manual_category === "property") {
+      homeValue += balance;
+    } else if (acct.manual_category === "investment") {
+      // Manual investments use the user's explicit tax_treatment choice
+      // directly rather than effectiveTaxTreatment, which would otherwise
+      // re-derive from (null) type/subtype/name and could misfire on a label
+      // like "Roth IRA".
+      if (acct.tax_treatment === "tax_advantaged") {
+        taxAdvantaged += balance;
+      } else {
+        taxable += balance;
+      }
+    } else if (effectiveTaxTreatment(acct) === "tax_advantaged") {
       taxAdvantaged += balance;
     } else {
       taxable += balance;
-    }
-  }
-
-  for (const asset of manualAssets) {
-    if (asset.is_debt) {
-      totalDebts += asset.value;
-      continue;
-    }
-    totalAssets += asset.value;
-    if (asset.asset_class === "real_estate") {
-      homeValue += asset.value;
-    } else if (asset.tax_treatment === "tax_advantaged") {
-      taxAdvantaged += asset.value;
-    } else {
-      taxable += asset.value;
     }
   }
 
@@ -113,18 +107,12 @@ export async function computeAndStoreSnapshot(
 ): Promise<SnapshotFigures> {
   const admin = createAdminClient();
 
-  const [{ data: accounts }, { data: manualAssets }] = await Promise.all([
-    admin
-      .from("accounts")
-      .select(
-        "id, current_balance, is_debt, type, subtype, name, tax_treatment, tax_treatment_override",
-      )
-      .eq("user_id", userId),
-    admin
-      .from("manual_assets")
-      .select("value, is_debt, asset_class, tax_treatment")
-      .eq("user_id", userId),
-  ]);
+  const { data: accounts } = await admin
+    .from("accounts")
+    .select(
+      "id, current_balance, is_debt, type, subtype, name, tax_treatment, tax_treatment_override, manual_category",
+    )
+    .eq("user_id", userId);
 
   const figures = computeNetWorth(
     (accounts ?? []).map((a) => ({
@@ -135,12 +123,7 @@ export async function computeAndStoreSnapshot(
       name: a.name,
       tax_treatment: a.tax_treatment,
       tax_treatment_override: a.tax_treatment_override,
-    })),
-    (manualAssets ?? []).map((m) => ({
-      value: Number(m.value),
-      is_debt: m.is_debt,
-      asset_class: m.asset_class,
-      tax_treatment: m.tax_treatment,
+      manual_category: a.manual_category,
     })),
   );
 

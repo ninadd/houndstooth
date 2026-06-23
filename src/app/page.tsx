@@ -5,10 +5,6 @@ import { TopNav } from "@/components/dashboard/top-nav";
 import { HeroCharts, type HeroPoint } from "@/components/dashboard/hero-charts";
 import { SummaryCards } from "@/components/dashboard/summary-cards";
 import {
-  ManualAssetsCard,
-  type ManualAsset,
-} from "@/components/dashboard/manual-assets";
-import {
   AccountsTable,
   type AccountRow,
 } from "@/components/dashboard/accounts-table";
@@ -38,17 +34,13 @@ export default async function DashboardPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const [accountsRes, manualRes, snapshotsRes, summaryRes] = await Promise.all([
+  const [accountsRes, snapshotsRes, summaryRes] = await Promise.all([
     supabase
       .from("accounts")
       .select(
-        "id, name, custom_name, official_name, type, subtype, tax_treatment, tax_treatment_override, is_debt, current_balance, mask, connections(institution_name)",
+        "id, name, custom_name, official_name, type, subtype, tax_treatment, tax_treatment_override, is_debt, current_balance, mask, is_manual, manual_category, connections(institution_name)",
       )
       .order("current_balance", { ascending: false, nullsFirst: false }),
-    supabase
-      .from("manual_assets")
-      .select("id, label, asset_class, value, is_debt, tax_treatment")
-      .order("value", { ascending: false }),
     supabase
       .from("net_worth_snapshots")
       .select(
@@ -83,17 +75,10 @@ export default async function DashboardPage() {
         a.current_balance == null ? null : Number(a.current_balance),
       mask: a.mask,
       institution_name: item?.institution_name ?? null,
+      is_manual: a.is_manual,
+      manual_category: a.manual_category,
     };
   });
-
-  const manualAssets: ManualAsset[] = (manualRes.data ?? []).map((m) => ({
-    id: m.id,
-    label: m.label,
-    asset_class: m.asset_class,
-    value: Number(m.value),
-    is_debt: m.is_debt,
-    tax_treatment: m.tax_treatment,
-  }));
 
   const snapshots = snapshotsRes.data ?? [];
   const series: HeroPoint[] = snapshots.map((s) => ({
@@ -142,8 +127,6 @@ export default async function DashboardPage() {
           />
 
           <SummaryCards figures={figures} />
-
-          <ManualAssetsCard assets={manualAssets} />
 
           <section className="space-y-4">
             <div className="flex items-center justify-between">

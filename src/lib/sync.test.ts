@@ -92,7 +92,6 @@ describe("syncUser reconciliation (mock provider)", () => {
         { id: "s-orphan", user_id: U },
       ],
       holdings: [{ id: "h1", user_id: U, account_id: "a-keep", security_id: "s-ref" }],
-      manual_assets: [],
       net_worth_snapshots: [],
     };
   });
