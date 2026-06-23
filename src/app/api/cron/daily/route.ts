@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { syncUser, extractProviderError } from "@/lib/sync";
 import { generateDailySummary } from "@/lib/daily-summary";
+import { refreshManualHoldingPrices } from "@/lib/manual-investments";
+import { computeAndStoreSnapshot } from "@/lib/snapshot";
 
 // Always run on-demand (never cached/statically optimized).
 export const dynamic = "force-dynamic";
@@ -56,6 +58,12 @@ export async function GET(request: NextRequest) {
 
   for (const user of data.users) {
     try {
+      // Refresh manual-investment prices first so syncUser's snapshot at the
+      // end of this call picks up today's fresh values too. syncUser skips
+      // the snapshot entirely when SnapTrade isn't configured, so recompute
+      // explicitly here as well — manual prices can change daily on their own.
+      await refreshManualHoldingPrices(user.id);
+      await computeAndStoreSnapshot(user.id);
       const r = await syncUser(user.id);
       let summary = "skipped_no_key";
       if (hasGemini) {
