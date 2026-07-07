@@ -4,10 +4,33 @@ updates:
     directory: "/"
     schedule:
       interval: weekly
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
+    groups:
+      # Roll all routine (minor/patch) npm updates into a single weekly PR. This
+      # also keeps peer-locked packages (e.g. react + react-dom) bumping together,
+      # instead of separate PRs that break each other's peer ranges.
+      npm-minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+    ignore:
+      # Next.js is pinned intentionally (see AGENTS.md). eslint-config-next tracks
+      # Next's major line, and eslint majors outpace what it supports (eslint 10
+      # breaks the lint step under eslint-config-next 16).
+      - dependency-name: "next"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "eslint-config-next"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
       interval: weekly
-    open-pull-requests-limit: 10
+    groups:
+      github-actions:
+        patterns:
+          - "*"
