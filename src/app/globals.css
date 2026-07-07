@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+/* shadcn ships its Tailwind layer here; required at build time (keep the dep). */
 @import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));

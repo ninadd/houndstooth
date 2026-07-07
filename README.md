@@ -1,10 +1,24 @@
 # Houndstooth
 
+[![CI](https://github.com/ninadd/houndstooth/actions/workflows/ci.yml/badge.svg)](https://github.com/ninadd/houndstooth/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Self-hosted net-worth & investment tracker. Aggregates accounts across institutions,
-separates taxable vs tax-advantaged holdings, charts Net Worth and Investments over
-time ("Time Machine"), and generates a privacy-preserving daily AI market summary.
+A self-hosted investment tracker built around three design pillars:
+
+- **Privacy-first.** Your financial data lives in *your* Supabase project. The daily AI
+  summary only ever sees anonymized aggregates (sector weights, % moves, tax split) —
+  never dollar balances, share counts, or position values.
+- **Single-user.** One person, one instance. No multi-tenant mode, no shared backend,
+  nothing sent to anyone else.
+- **Free / low-cost.** Runs on free tiers end to end — Vercel Hobby, Supabase free,
+  SnapTrade's free tier, and Google AI Studio.
+
+It aggregates accounts across institutions, separates taxable vs tax-advantaged holdings,
+charts your investments over time, and generates a privacy-preserving daily AI market
+summary.
+
+> **On the name:** Stripe and Plaid were taken — so Houndstooth it is, the next pattern in
+> the drawer.
 
 **Stack:** Next.js (App Router) · Supabase (Postgres + Auth + RLS) · SnapTrade · Gemini ·
 Tailwind v4 + shadcn/ui · Recharts. Deployed on Vercel.
@@ -12,6 +26,12 @@ Tailwind v4 + shadcn/ui · Recharts. Deployed on Vercel.
 > **Self-hosting:** Houndstooth is single-user by design — you run your **own** instance
 > with your **own** Supabase project and API keys (Gemini, SnapTrade). Nothing is shared
 > with anyone else. See [CONTRIBUTING.md](CONTRIBUTING.md) to hack on it.
+
+## Requirements
+
+- **Node ≥ 20** and **npm** (see `.nvmrc`).
+- A Supabase project (free tier is fine). SnapTrade + Gemini keys are optional — the app
+  runs fully in **mock mode** without them.
 
 ## Quick start (mock mode — no credentials needed)
 
@@ -45,19 +65,20 @@ Vercel project for deployment.
 | `GEMINI_API_KEY` | server-only | AI summary | Google AI Studio (enable Search grounding) |
 | `CRON_SECRET` | server-only | deploy only | Any random string; set in Vercel for cron auth |
 | `MFA_TRUST_SECRET` | server-only | recommended | `node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"` |
+| `NEXT_PUBLIC_ENABLE_ANALYTICS` | public | optional | Set to `true` to enable Vercel Web Analytics; **off by default** (privacy-first) |
 
-## Milestone 1 status — Foundation ✅
+## Foundation
 
-- Next.js + Tailwind + shadcn scaffold with a dark-first, Robinhood-inspired theme.
+- Next.js + Tailwind + shadcn scaffold with a dark-first theme.
 - Supabase clients: browser (RLS), server (RLS), admin (service-role, server-only).
 - Single-user email auth + `proxy.ts` route protection.
 - Full schema migration with RLS on every table (`supabase/migrations/0001_initial_schema.sql`).
 - Dashboard shell with **two hero charts** (Net Worth + Investments), shared range
-  pills, and allocation cards (mock data until M2).
+  pills, and allocation cards.
 
-## Daily snapshot cron (Milestone 4)
+## Daily snapshot cron
 
-A snapshot of net worth is recorded once per day at **1:10 PM Pacific**.
+A daily snapshot of your accounts is recorded once per day at **1:10 PM Pacific**.
 
 - Runs **weekdays only** (markets are closed weekends).
 - Vercel Cron is UTC-only and can't follow DST, so [vercel.json](vercel.json) schedules
@@ -73,7 +94,7 @@ A snapshot of net worth is recorded once per day at **1:10 PM Pacific**.
   PT gate. `?days=` seeding lives in the dev-only `/api/dev/backfill` route.
 - Note: Vercel Hobby allows 2 cron jobs at daily granularity — this uses exactly 2.
 
-## AI daily summary (Milestone 5)
+## AI daily summary
 
 A privacy-preserving daily briefing, generated after the snapshot in the same cron.
 
@@ -97,7 +118,8 @@ A privacy-preserving daily briefing, generated after the snapshot in the same cr
 
 ## SnapTrade connection flow
 
-Brokerages are connected through SnapTrade's hosted Connection Portal. The flow:
+Brokerages are connected through SnapTrade's hosted Connection Portal. The integration
+runs entirely on **SnapTrade's free tier** — no paid plan required. The flow:
 
 - The data layer is provider-abstracted ([src/lib/providers](src/lib/providers)): a
   `DataProvider` interface with a `SnapTradeProvider` and a `MockProvider`. The active one
@@ -129,9 +151,9 @@ Brokerages are connected through SnapTrade's hosted Connection Portal. The flow:
    - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `SUPABASE_SERVICE_ROLE_KEY` (Settings → API)
 
-2. **Apply the schema.** Run every file in `supabase/migrations/` **in order**
-   (`0001` → `0002` → `0003` → `0004` → `0005`), either by pasting each into the
-   Supabase SQL editor or via the Supabase CLI (`supabase db push`).
+2. **Apply the schema.** Run every file in `supabase/migrations/` in ascending order,
+   either by pasting each into the Supabase SQL editor or via the Supabase CLI
+   (`supabase db push`).
 
 3. **Create your single user** in Supabase → Authentication → Users → "Add user"
    (email + password). The `on_auth_user_created` trigger creates the profile row.
