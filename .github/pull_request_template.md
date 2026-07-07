@@ -1,15 +1,9 @@
-## Summary
-
-<!-- What does this change and why? -->
-
-## How was this tested?
-
-<!-- Describe how you verified the change. -->
-
-## Checklist
-
-- [ ] `npm run lint` — no new lint errors
-- [ ] `npm test` — unit tests pass
-- [ ] `npm run build` — production build succeeds
-- [ ] PR is focused and describes the change + how it was tested
-- [ ] No secrets, account IDs, or tokens are included in the diff
+> ⚠️ **This project does not accept pull requests.**
+>
+> Houndstooth is a personal, single-user project, so external PRs won't be merged.
+>
+> - Found a bug? Please [open a bug report](../../issues/new?template=bug_report.md) instead.
+> - Want to change something for your own use? You're welcome to **fork** under the
+>   [MIT license](../LICENSE).
+>
+> Thanks for understanding! See [CONTRIBUTING.md](../CONTRIBUTING.md) for details.

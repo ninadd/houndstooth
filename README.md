@@ -25,7 +25,8 @@ Tailwind v4 + shadcn/ui · Recharts. Deployed on Vercel.
 
 > **Self-hosting:** Houndstooth is single-user by design — you run your **own** instance
 > with your **own** Supabase project and API keys (Gemini, SnapTrade). Nothing is shared
-> with anyone else. See [CONTRIBUTING.md](CONTRIBUTING.md) to hack on it.
+> with anyone else. Bug reports are welcome; PRs are not accepted — see
+> [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Requirements
 
