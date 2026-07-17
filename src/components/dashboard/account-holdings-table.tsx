@@ -1,16 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronDown, ChevronsUpDown, ChevronUp } from "lucide-react";
 import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { cn } from "@/lib/utils";
+import { SortHeader, type SortDir } from "@/components/ui/sort-header";
 import { formatCurrency, formatPercent, formatSignedCurrency } from "@/lib/format";
 
 export type AccountHoldingRow = {
@@ -24,7 +22,6 @@ export type AccountHoldingRow = {
 };
 
 type SortColumn = "holding" | "units" | "costBasis" | "value" | "gain";
-type SortDir = "asc" | "desc";
 
 /** Display label for a holding, preferring the ticker over the security name. */
 function displayLabel(h: AccountHoldingRow): string {
@@ -172,40 +169,5 @@ export function AccountHoldingsTable({
         </TableBody>
       </Table>
     </div>
-  );
-}
-
-function SortHeader({
-  column,
-  label,
-  sort,
-  onSort,
-  align = "left",
-  className,
-}: {
-  column: SortColumn;
-  label: string;
-  sort: { column: SortColumn; dir: SortDir };
-  onSort: (c: SortColumn) => void;
-  align?: "left" | "right";
-  className?: string;
-}) {
-  const active = sort.column === column;
-  const Icon = !active ? ChevronsUpDown : sort.dir === "asc" ? ChevronUp : ChevronDown;
-  return (
-    <TableHead className={cn(align === "right" && "text-right", className)}>
-      <button
-        type="button"
-        onClick={() => onSort(column)}
-        className={cn(
-          "inline-flex items-center gap-1 font-medium outline-none hover:text-foreground focus-visible:underline",
-          align === "right" && "flex-row-reverse",
-          active ? "text-foreground" : "text-muted-foreground",
-        )}
-      >
-        {label}
-        <Icon className="size-3.5 shrink-0" />
-      </button>
-    </TableHead>
   );
 }

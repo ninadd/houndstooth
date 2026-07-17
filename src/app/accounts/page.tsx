@@ -9,7 +9,6 @@ import {
 } from "@/components/dashboard/accounts-table";
 import type { ManualAccountRow } from "@/components/dashboard/manual-account-dialog";
 import { ManualAccountActions } from "@/components/dashboard/manual-account-actions";
-import { DailySummaryProvider } from "@/components/dashboard/daily-summary-context";
 import { Card, CardContent } from "@/components/ui/card";
 
 export default async function AccountsPage() {
@@ -91,59 +90,57 @@ export default async function AccountsPage() {
   const hasManualAccounts = manualAccounts.length > 0;
 
   return (
-    <DailySummaryProvider summary={null}>
-      <div className="min-h-screen">
-        <TopNav email={user.email ?? "account"} />
+    <div className="min-h-screen">
+      <TopNav email={user.email ?? "account"} />
 
-        <main className="mx-auto max-w-5xl space-y-10 px-4 py-8 sm:px-6">
-          <div className="space-y-1">
-            <Link
-              href="/"
-              className="text-sm text-muted-foreground hover:text-foreground"
-            >
-              ← Dashboard
-            </Link>
-            <h1 className="text-2xl font-semibold tracking-tight">Accounts</h1>
+      <main className="mx-auto max-w-5xl space-y-10 px-4 py-8 sm:px-6">
+        <div className="space-y-1">
+          <Link
+            href="/"
+            className="text-sm text-muted-foreground hover:text-foreground"
+          >
+            ← Dashboard
+          </Link>
+          <h1 className="text-2xl font-semibold tracking-tight">Accounts</h1>
+        </div>
+
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold tracking-tight">Synced accounts</h2>
+            <AccountActions hasAccounts={hasSyncedAccounts} />
           </div>
 
-          <section className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold tracking-tight">Synced accounts</h2>
-              <AccountActions hasAccounts={hasSyncedAccounts} />
-            </div>
+          {hasSyncedAccounts ? (
+            <AccountsTable accounts={syncedAccounts} showBalance={false} editable />
+          ) : (
+            <Card className="border-dashed">
+              <CardContent className="py-10 text-center text-sm text-muted-foreground">
+                No accounts yet. Connect a brokerage with SnapTrade to pull in
+                balances and holdings.
+              </CardContent>
+            </Card>
+          )}
+        </section>
 
-            {hasSyncedAccounts ? (
-              <AccountsTable accounts={syncedAccounts} showBalance={false} editable />
-            ) : (
-              <Card className="border-dashed">
-                <CardContent className="py-10 text-center text-sm text-muted-foreground">
-                  No accounts yet. Connect a brokerage with SnapTrade to pull in
-                  balances and holdings.
-                </CardContent>
-              </Card>
-            )}
-          </section>
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold tracking-tight">
+              Manually linked accounts
+            </h2>
+            <ManualAccountActions />
+          </div>
 
-          <section className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold tracking-tight">
-                Manually linked accounts
-              </h2>
-              <ManualAccountActions />
-            </div>
-
-            {hasManualAccounts ? (
-              <AccountsTable accounts={manualAccounts} showBalance={false} editable />
-            ) : (
-              <Card className="border-dashed">
-                <CardContent className="py-10 text-center text-sm text-muted-foreground">
-                  No manually added accounts yet.
-                </CardContent>
-              </Card>
-            )}
-          </section>
-        </main>
-      </div>
-    </DailySummaryProvider>
+          {hasManualAccounts ? (
+            <AccountsTable accounts={manualAccounts} showBalance={false} editable />
+          ) : (
+            <Card className="border-dashed">
+              <CardContent className="py-10 text-center text-sm text-muted-foreground">
+                No manually added accounts yet.
+              </CardContent>
+            </Card>
+          )}
+        </section>
+      </main>
+    </div>
   );
 }

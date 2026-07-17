@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateDailySummary } from "@/lib/daily-summary";
+import { classifyMissingSectors } from "@/lib/sector-classify";
 
 /**
  * Dev-only: generate today's summary on demand.
@@ -33,8 +34,16 @@ export async function POST(request: NextRequest) {
 
   const mock = request.nextUrl.searchParams.get("mock") === "1";
   try {
+    let sectors: number | undefined;
+    if (!mock && process.env.GEMINI_API_KEY) {
+      try {
+        sectors = (await classifyMissingSectors(userId)).classified;
+      } catch (err) {
+        console.error("sector classify failed", userId, err);
+      }
+    }
     const result = await generateDailySummary(userId, { mock });
-    return NextResponse.json(result);
+    return NextResponse.json({ ...result, sectors });
   } catch (err) {
     console.error("dev summary error", err);
     return NextResponse.json(

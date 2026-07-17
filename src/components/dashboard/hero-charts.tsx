@@ -82,7 +82,7 @@ export function HeroCharts({
   series: HeroPoint[];
   latest: { netWorth: number; investments: number };
 }) {
-  const [range, setRange] = useState<RangeKey>("1D");
+  const [range, setRange] = useState<RangeKey>("1W");
   const [activeMetric, setActiveMetric] = useState<Metric>("netWorth");
   const rangeDef = RANGES.find((r) => r.key === range)!;
 
@@ -169,7 +169,7 @@ export function SingleHeroChart({
   current: number;
   title: string;
 }) {
-  const [range, setRange] = useState<RangeKey>("1D");
+  const [range, setRange] = useState<RangeKey>("1W");
   const rangeDef = RANGES.find((r) => r.key === range)!;
 
   return (

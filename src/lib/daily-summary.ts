@@ -18,7 +18,7 @@ export type SummaryHolding = {
   reason: string | null;
 };
 
-/** Self-contained record rendered by the dashboard lightbox. */
+/** Self-contained record rendered by the /summary page. */
 export type SummaryDrivers = {
   headline: string;
   tiles: { net_worth: number; investments: number };
@@ -27,6 +27,13 @@ export type SummaryDrivers = {
   watch: string;
   holdings: SummaryHolding[];
   generatedAt: string;
+};
+
+/** The latest stored summary, as loaded from daily_summaries. */
+export type DailySummary = {
+  date: string;
+  model: string | null;
+  drivers: SummaryDrivers;
 };
 
 type LatestSnapshot = { id: string; figures: SnapshotFigures };

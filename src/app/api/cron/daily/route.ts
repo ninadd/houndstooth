@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { syncUser, extractProviderError } from "@/lib/sync";
 import { generateDailySummary } from "@/lib/daily-summary";
+import { classifyMissingSectors } from "@/lib/sector-classify";
 import { refreshManualHoldingPrices } from "@/lib/manual-investments";
 import { computeAndStoreSnapshot } from "@/lib/snapshot";
 
@@ -53,6 +54,7 @@ export async function GET(request: NextRequest) {
     accounts?: number;
     holdings?: number;
     summary?: string;
+    sectors?: number;
     error?: string;
   }[] = [];
 
@@ -66,11 +68,19 @@ export async function GET(request: NextRequest) {
       await computeAndStoreSnapshot(user.id);
       const r = await syncUser(user.id);
       let summary = "skipped_no_key";
+      let sectors: number | undefined;
       if (hasGemini) {
+        // Classify before generating so today's summary sees fresh sectors.
+        // Never let a classification failure block the summary itself.
+        try {
+          sectors = (await classifyMissingSectors(user.id)).classified;
+        } catch (err) {
+          console.error("sector classify failed", user.id, err);
+        }
         const s = await generateDailySummary(user.id);
         summary = s.ok ? "generated" : s.reason;
       }
-      results.push({ userId: user.id, ...r, summary });
+      results.push({ userId: user.id, ...r, summary, sectors });
     } catch (err) {
       console.error("cron failed", user.id, extractProviderError(err));
       results.push({ userId: user.id, error: "sync_failed" });

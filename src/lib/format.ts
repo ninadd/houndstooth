@@ -14,5 +14,9 @@ export function formatSignedCurrency(value: number): string {
 
 export function formatPercent(value: number): string {
   const sign = value >= 0 ? "+" : "−";
-  return `${sign}${Math.abs(value).toFixed(2)}%`;
+  const magnitude = new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Math.abs(value));
+  return `${sign}${magnitude}%`;
 }

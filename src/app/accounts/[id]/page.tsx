@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { TopNav } from "@/components/dashboard/top-nav";
-import { DailySummaryProvider } from "@/components/dashboard/daily-summary-context";
 import { SingleHeroChart, type SinglePoint } from "@/components/dashboard/hero-charts";
 import {
   AccountHoldingsTable,
@@ -72,41 +71,39 @@ export default async function AccountDetailPage({
   }));
 
   return (
-    <DailySummaryProvider summary={null}>
-      <div className="min-h-screen">
-        <TopNav email={user.email ?? "account"} />
+    <div className="min-h-screen">
+      <TopNav email={user.email ?? "account"} />
 
-        <main className="mx-auto max-w-5xl space-y-8 px-4 py-8 sm:px-6">
-          <div className="space-y-1">
-            <Link
-              href="/accounts"
-              className="text-sm text-muted-foreground hover:text-foreground"
-            >
-              ← Accounts
-            </Link>
-            <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-            {(institution || account.mask) && (
-              <p className="text-sm text-muted-foreground">
-                {institution ?? "—"}
-                {account.mask ? ` ••${account.mask}` : ""}
-              </p>
-            )}
-          </div>
+      <main className="mx-auto max-w-5xl space-y-8 px-4 py-8 sm:px-6">
+        <div className="space-y-1">
+          <Link
+            href="/accounts"
+            className="text-sm text-muted-foreground hover:text-foreground"
+          >
+            ← Accounts
+          </Link>
+          <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+          {(institution || account.mask) && (
+            <p className="text-sm text-muted-foreground">
+              {institution ?? "—"}
+              {account.mask ? ` ••${account.mask}` : ""}
+            </p>
+          )}
+        </div>
 
-          <SingleHeroChart series={series} current={current} title="Value" />
+        <SingleHeroChart series={series} current={current} title="Value" />
 
-          <section className="space-y-4">
-            <h2 className="text-lg font-semibold tracking-tight">Holdings</h2>
-            {holdings.length > 0 ? (
-              <AccountHoldingsTable holdings={holdings} />
-            ) : (
-              <div className="rounded-xl border border-dashed border-border py-10 text-center text-sm text-muted-foreground">
-                No holdings in this account.
-              </div>
-            )}
-          </section>
-        </main>
-      </div>
-    </DailySummaryProvider>
+        <section className="space-y-4">
+          <h2 className="text-lg font-semibold tracking-tight">Holdings</h2>
+          {holdings.length > 0 ? (
+            <AccountHoldingsTable holdings={holdings} />
+          ) : (
+            <div className="rounded-xl border border-dashed border-border py-10 text-center text-sm text-muted-foreground">
+              No holdings in this account.
+            </div>
+          )}
+        </section>
+      </main>
+    </div>
   );
 }

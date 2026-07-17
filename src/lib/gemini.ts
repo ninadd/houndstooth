@@ -95,3 +95,109 @@ export async function generateSummary(
   const text = response.text ?? "";
   return { result: parseJsonObject(text), model: MODEL };
 }
+
+// ---------------------------------------------------------------------------
+// Sector classification — one-time enrichment of securities that SnapTrade
+// leaves without a sector. Privacy-safe by construction: only tickers and
+// security names are sent, never values, quantities, or account data.
+// ---------------------------------------------------------------------------
+
+export const SECTOR_ALLOWLIST = [
+  "Information Technology",
+  "Health Care",
+  "Financials",
+  "Consumer Discretionary",
+  "Consumer Staples",
+  "Communication Services",
+  "Industrials",
+  "Energy",
+  "Materials",
+  "Utilities",
+  "Real Estate",
+  "Broad ETF",
+  "Sector ETF",
+  "Bond ETF",
+  "International ETF",
+  "Commodity ETF",
+  "Crypto",
+  "Money Market",
+  "Other",
+] as const;
+
+/** Match a model-returned sector against the allowlist, or null to discard. */
+export function matchSector(sector: string): string | null {
+  const trimmed = sector.trim();
+  const exact = SECTOR_ALLOWLIST.find((s) => s === trimmed);
+  if (exact) return exact;
+  const ci = SECTOR_ALLOWLIST.find(
+    (s) => s.toLowerCase() === trimmed.toLowerCase(),
+  );
+  return ci ?? null;
+}
+
+const CLASSIFY_SYSTEM_INSTRUCTION = `You classify securities into sectors. Return ONLY a JSON array, no markdown, no code fences.`;
+
+function buildClassifyPrompt(
+  items: { ticker: string; name: string | null }[],
+): string {
+  return [
+    `Classify each security into exactly one sector from this list: ${SECTOR_ALLOWLIST.join(", ")}.`,
+    "For ETFs and mutual funds use the ETF labels (Broad ETF, Sector ETF, Bond ETF, International ETF, Commodity ETF), not the sector of the underlying holdings.",
+    'Use "Other" only when nothing else fits.',
+    "",
+    "Securities:",
+    ...items.map((i) => `${i.ticker} — ${i.name ?? "(no name)"}`),
+    "",
+    'Return a JSON array: [{"ticker": string, "sector": string}]',
+  ].join("\n");
+}
+
+/** Extract a JSON array from a model response that may include stray text. */
+function parseJsonArray(text: string): { ticker: string; sector: string }[] {
+  let s = text.trim();
+  s = s.replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
+  const start = s.indexOf("[");
+  const end = s.lastIndexOf("]");
+  if (start === -1 || end === -1) {
+    throw new Error("Gemini response contained no JSON array");
+  }
+  const parsed = JSON.parse(s.slice(start, end + 1));
+  if (!Array.isArray(parsed)) return [];
+  return parsed.map((m: { ticker?: string; sector?: string }) => ({
+    ticker: String(m.ticker ?? ""),
+    sector: String(m.sector ?? ""),
+  }));
+}
+
+/**
+ * Classify tickers into sectors. Returns a map of UPPERCASED ticker →
+ * allowlisted sector; tickers with invalid or missing classifications are
+ * simply absent (left NULL by the caller and retried on a later run).
+ */
+export async function classifySectors(
+  items: { ticker: string; name: string | null }[],
+): Promise<Map<string, string>> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
+
+  const ai = new GoogleGenAI({ apiKey });
+  // No search grounding here: it conflicts with JSON output mode and isn't
+  // needed for a static ticker → sector mapping.
+  const response = await ai.models.generateContent({
+    model: MODEL,
+    contents: buildClassifyPrompt(items),
+    config: {
+      systemInstruction: CLASSIFY_SYSTEM_INSTRUCTION,
+      responseMimeType: "application/json",
+      temperature: 0,
+    },
+  });
+
+  const results = parseJsonArray(response.text ?? "");
+  const byTicker = new Map<string, string>();
+  for (const r of results) {
+    const sector = matchSector(r.sector);
+    if (r.ticker && sector) byTicker.set(r.ticker.toUpperCase(), sector);
+  }
+  return byTicker;
+}

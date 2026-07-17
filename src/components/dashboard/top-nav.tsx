@@ -12,11 +12,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useDailySummary } from "@/components/dashboard/daily-summary-context";
 
 export function TopNav({ email }: { email: string }) {
   const initial = email.charAt(0).toUpperCase();
-  const { summary, setOpen } = useDailySummary();
 
   return (
     <header className="sticky top-0 z-20 border-b border-border bg-background/80 backdrop-blur">
@@ -34,8 +32,8 @@ export function TopNav({ email }: { email: string }) {
             <Button
               variant="ghost"
               size="sm"
-              disabled={!summary}
-              onClick={() => setOpen(true)}
+              nativeButton={false}
+              render={<Link href="/summary" />}
             >
               Daily summary
             </Button>

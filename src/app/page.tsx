@@ -9,13 +9,9 @@ import {
   type AccountRow,
 } from "@/components/dashboard/accounts-table";
 import { DailySummaryBanner } from "@/components/dashboard/daily-summary";
-import {
-  DailySummaryProvider,
-  type DailySummary,
-} from "@/components/dashboard/daily-summary-context";
 import { Card, CardContent } from "@/components/ui/card";
 import type { SnapshotFigures } from "@/lib/snapshot";
-import type { SummaryDrivers } from "@/lib/daily-summary";
+import type { DailySummary, SummaryDrivers } from "@/lib/daily-summary";
 
 const ZERO_FIGURES: SnapshotFigures = {
   total_assets: 0,
@@ -111,42 +107,40 @@ export default async function DashboardPage() {
     : null;
 
   return (
-    <DailySummaryProvider summary={summary}>
-      <div className="min-h-screen">
-        <TopNav email={user.email ?? "account"} />
+    <div className="min-h-screen">
+      <TopNav email={user.email ?? "account"} />
 
-        <main className="mx-auto max-w-5xl space-y-10 px-4 py-8 sm:px-6">
-          <DailySummaryBanner />
+      <main className="mx-auto max-w-5xl space-y-10 px-4 py-8 sm:px-6">
+        <DailySummaryBanner summary={summary} />
 
-          <HeroCharts
-            series={series}
-            latest={{
-              netWorth: figures.net_worth,
-              investments: figures.investable_assets,
-            }}
-          />
+        <HeroCharts
+          series={series}
+          latest={{
+            netWorth: figures.net_worth,
+            investments: figures.investable_assets,
+          }}
+        />
 
-          <SummaryCards figures={figures} />
+        <SummaryCards figures={figures} />
 
-          <section className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold tracking-tight">Accounts</h2>
-              <AccountActions hasAccounts={hasAccounts} syncOnly />
-            </div>
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold tracking-tight">Accounts</h2>
+            <AccountActions hasAccounts={hasAccounts} syncOnly />
+          </div>
 
-            {hasAccounts ? (
-              <AccountsTable accounts={accounts} linkRows />
-            ) : (
-              <Card className="border-dashed">
-                <CardContent className="py-10 text-center text-sm text-muted-foreground">
-                  No accounts yet. Connect a brokerage with SnapTrade to pull in
-                  balances and holdings.
-                </CardContent>
-              </Card>
-            )}
-          </section>
-        </main>
-      </div>
-    </DailySummaryProvider>
+          {hasAccounts ? (
+            <AccountsTable accounts={accounts} linkRows />
+          ) : (
+            <Card className="border-dashed">
+              <CardContent className="py-10 text-center text-sm text-muted-foreground">
+                No accounts yet. Connect a brokerage with SnapTrade to pull in
+                balances and holdings.
+              </CardContent>
+            </Card>
+          )}
+        </section>
+      </main>
+    </div>
   );
 }
