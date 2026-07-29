@@ -11,6 +11,13 @@ export type SummaryResult = {
 
 const MODEL = "gemini-2.5-flash";
 
+// Per-call ceilings. Search grounding makes the summary call far slower than
+// classification, so they differ. Both sit just under the cron's own per-stage
+// budgets in api/cron/daily so that this signal — which actually cancels the
+// request — fires first, and the cron's withTimeout stays a backstop.
+const SUMMARY_TIMEOUT_MS = 80_000;
+const CLASSIFY_TIMEOUT_MS = 40_000;
+
 const SYSTEM_INSTRUCTION = `You are a markets analyst writing a concise daily briefing about one investor's portfolio.
 
 You receive ONLY de-identified data: sector weights (%), per-ticker daily % moves, and the taxable/tax-advantaged split (%). You never receive — and must never ask for or infer — dollar balances, share counts, or position values.
@@ -89,6 +96,7 @@ export async function generateSummary(
       systemInstruction: SYSTEM_INSTRUCTION,
       tools: [{ googleSearch: {} }],
       temperature: 0.4,
+      abortSignal: AbortSignal.timeout(SUMMARY_TIMEOUT_MS),
     },
   });
 
@@ -190,6 +198,7 @@ export async function classifySectors(
       systemInstruction: CLASSIFY_SYSTEM_INSTRUCTION,
       responseMimeType: "application/json",
       temperature: 0,
+      abortSignal: AbortSignal.timeout(CLASSIFY_TIMEOUT_MS),
     },
   });
 
