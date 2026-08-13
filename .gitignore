@@ -45,6 +45,13 @@ supabase/.branches
 # claude code — personal, per-developer settings
 .claude/settings.local.json
 
+# README drafts and scratch copies — README.md is the only one that ships
+README_NEW.md
+README-FROM-CLAUDE.md
+README_FEEDBACK.md
+README.md.bak
+*.md.bak
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
