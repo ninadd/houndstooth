@@ -1,11 +1,11 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { pacificDate, type SnapshotFigures } from "@/lib/snapshot";
 import {
-  buildGeminiContext,
+  buildOpenRouterContext,
   buildHoldingsReport,
   type HoldingsReport,
 } from "@/lib/holdings-report";
-import { generateSummary, type SummaryResult } from "@/lib/gemini";
+import { generateSummary, type SummaryResult } from "@/lib/openrouter";
 
 export type SummaryHolding = {
   ticker: string | null;
@@ -119,7 +119,7 @@ export async function generateDailySummary(
   if (opts.mock) {
     ({ result, model } = mockSummary(report));
   } else {
-    const ctx = buildGeminiContext(report, snapshot.figures, date);
+    const ctx = buildOpenRouterContext(report, snapshot.figures, date);
     ({ result, model } = await generateSummary(ctx));
   }
 

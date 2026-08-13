@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  buildGeminiContext,
+  buildOpenRouterContext,
   type HoldingsReport,
   type HoldingReportRow,
 } from "./holdings-report";
@@ -49,8 +49,8 @@ const report: HoldingsReport = {
   movers: [row({ ticker: "XOM", value: 98765.43, changePct: -2.1, direction: "down" })],
 };
 
-describe("buildGeminiContext (privacy sanitizer)", () => {
-  const ctx = buildGeminiContext(report, figures, "2026-06-19");
+describe("buildOpenRouterContext (privacy sanitizer)", () => {
+  const ctx = buildOpenRouterContext(report, figures, "2026-06-19");
   const serialized = JSON.stringify(ctx);
 
   it("never leaks dollar values or quantities", () => {

@@ -1,12 +1,12 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { classifySectors } from "@/lib/gemini";
+import { classifySectors } from "@/lib/openrouter";
 
 /** Cap per run; anything beyond it is picked up on the next daily cron. */
 const BATCH_LIMIT = 50;
 
 /**
  * Fill in `securities.sector` for a user's holdings. SnapTrade never provides
- * sector data, so rows start NULL; this classifies them once via Gemini
+ * sector data, so rows start NULL; this classifies them once via OpenRouter
  * (tickers + names only) and persists the result. Cash equivalents are set
  * directly without a model call. Rows the model can't classify stay NULL and
  * are retried on the next run.

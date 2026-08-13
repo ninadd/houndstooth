@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
     .eq("summary_date", today);
   const alreadyGenerated = new Set((done ?? []).map((r) => r.user_id as string));
 
-  const hasGemini = Boolean(process.env.GEMINI_API_KEY);
+  const hasOpenRouter = Boolean(process.env.OPENROUTER_API_KEY);
   const deadline = startedAt + (maxDuration - 30) * 1000;
   const results: UserResult[] = [];
   let attempted = 0;
@@ -135,7 +135,7 @@ export async function GET(request: NextRequest) {
 
       let summary = "skipped_no_key";
       let sectors: number | undefined;
-      if (hasGemini) {
+      if (hasOpenRouter) {
         // Classify before generating so today's summary sees fresh sectors.
         // Never let a classification failure block the summary itself.
         try {
