@@ -159,7 +159,7 @@ export async function buildHoldingsReport(
 // contain dollar balances, share quantities, or position values.
 // ---------------------------------------------------------------------------
 
-export type GeminiContext = {
+export type OpenRouterContext = {
   date: string;
   taxSplitPct: { taxable: number; taxAdvantaged: number };
   sectorWeights: { sector: string; weightPct: number }[];
@@ -167,11 +167,11 @@ export type GeminiContext = {
   movers: { ticker: string; direction: "up" | "down" | "flat"; changePct: number }[];
 };
 
-export function buildGeminiContext(
+export function buildOpenRouterContext(
   report: HoldingsReport,
   figures: SnapshotFigures,
   date: string,
-): GeminiContext {
+): OpenRouterContext {
   const investable = figures.taxable_total + figures.tax_advantaged_total;
   const pct = (n: number) => (investable > 0 ? round((n / investable) * 100, 1) : 0);
 
