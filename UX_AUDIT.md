@@ -4,10 +4,11 @@ _Audit date: 2026-10-01_
 
 ## Context
 
-This audit covers usability, repeated content on the dashboard, feedback after actions, awkward navigation, and any other pain points. No code was changed as part of it. It used two sources:
+This audit covers usability, repeated content on the dashboard, feedback after actions, awkward navigation, and any other pain points. No code was changed as part of it. It used three sources:
 
 - **Code review** of every page, component, server action, and route under `src/`.
 - **A read-only walkthrough of the live deployment** at desktop (1280px), tablet (832px), and phone (375px) widths. It only involved navigating, toggling chart ranges, and opening dialogs, which were closed with Escape. Sync, Connect, Save, and Delete were never clicked on the live site, so those flows were checked from the code only.
+- **A visual design review** (added 2026-10-15) using the `/interface-design` and `/design-review` skills on the dashboard, daily summary, account detail, and mobile views. Its findings are in section 6 and Phase 6.
 
 Severity: **H** means it costs data or trust, or blocks a task. **M** means it's a real friction or confusion. **L** means polish.
 
@@ -23,7 +24,7 @@ Severity: **H** means it costs data or trust, or blocks a task. **M** means it's
   - Total assets shows in both the Net worth card and the Investable card.
   - Code: `src/app/page.tsx:116-124`, `src/components/dashboard/summary-cards.tsx:29-56`.
   - Fix: each figure appears once (see Phase 3).
-- **D2 · M: The two desktop charts look nearly identical.** Net worth minus investments equals property minus debts, and that barely moves. On live data, both charts showed the exact same dollar change for 1D, and the 1W and ALL curves look the same. Code: `hero-charts.tsx:122-138`. Fix: one chart with a Net worth / Investments switch.
+- **D2 · M: The two desktop charts look nearly identical.** Net worth minus investments equals property minus debts, and that barely moves. On live data, both charts showed the exact same dollar change for 1D, and the 1W and ALL curves look the same. Code: `hero-charts.tsx:122-138`. Fix: one chart with Net Worth as the hero and Investments as a quieter second line (V1).
 - **D3 · L: Every chart is rendered twice in the page.** There is a phone version and a desktop version, with one hidden by CSS. That makes three chart instances for two visible ones, and the console shows Recharts "width(0) and height(0)" warnings. Code: `hero-charts.tsx:91-138`.
 - **D4 · M: The "Investable assets" card only restates arithmetic** (total assets minus property) and adds nothing new.
 - **D5 · L: One metric has two names.** It is "Investments" in the hero and on the summary page, but "Investable assets" on the card.
@@ -108,6 +109,46 @@ Severity: **H** means it costs data or trust, or blocks a task. **M** means it's
   - README, CHANGELOG and `package.json` still mention Gemini and "allocation cards".
   - The toast component calls the theme hook without a theme provider (`ui/sonner.tsx:8`).
 
+### 6. Visual design review (`/interface-design` and `/design-review`)
+
+The standard was "would a design lead at Linear or Apple put their name on this?" **Verdict: not approved yet**, with 4 blockers. Where a finding overlaps one above, the matching ID is in brackets.
+
+**Blockers**
+
+- **V1 · Blocker: The dashboard has no focal point** [D1, D2, N8]. Net Worth and Investments sit in two equal hero charts, and the cards below repeat the same two numbers.
+  - Make Net Worth the single hero. Show Investments as a quieter second line on the same chart, with its own small figure. This also removes the mobile Net Worth/Investments tabs.
+  - Move the range control (1D … ALL) into the hero's header so it belongs to the chart. Today it floats underneath, left-aligned.
+  - Show the cents smaller and muted (whole dollars at full weight, `.34` demoted).
+  - Rework `SummaryCards` into a breakdown instead of a repeat: assets minus debts, investable excluding property, and the tax split. The "Investable assets" card lists total assets and property with no result line, so the math doesn't read.
+  - Files: `page.tsx`, `hero-charts.tsx`, `summary-cards.tsx`.
+- **V2 · Blocker: The daily summary's hierarchy is flat.** The page title (24px), the AI headline (20px), and every label ("Net Worth", "Top 3 holdings", "Macro market", all 16px semibold) compete at about the same weight. Tile labels are as loud as the values under them.
+  - Make the headline the page's h1 and focal point; "Daily summary · <date>" becomes a small line above it.
+  - Drop tile labels to 12px, medium weight, muted, so values lead.
+  - Give section headings one consistent, quieter level. Move the long paragraphs from muted 14px to primary-color text at a readable size and line length.
+  - Fix inconsistent capitalization ("Net Worth" vs "Net worth" across pages).
+  - File: `summary/page.tsx`.
+- **V3 · Blocker: Raw markdown shows on screen** [U5]. The Macro and Portfolio paragraphs display citation links like `[stocknear.com](https://…)` literally. Render them as small source links (new tab, `rel="noopener"`), or strip them when the summary is generated. Files: `summary/page.tsx` or `lib/daily-summary.ts`.
+- **V4 · Blocker: Hand-built controls are missing states and accessibility** [N8, O4].
+  - The range pills are about 28px tall (below the 40px minimum), have no focus style and no `aria-pressed`, and are copied twice in `hero-charts.tsx`. Pull them into one `RangeControl` built on Base UI's toggle group, with focus styles and a larger hit area.
+  - The mobile metric tabs are hand-built even though `ui/tabs.tsx` exists. V1 removes them.
+  - The banner's dismiss ✕ is a 16px target. Give it a 40px hit area and a focus style.
+  - Files: `hero-charts.tsx`, `daily-summary.tsx`.
+
+**Should-fix**
+
+- **V5 · Green means two things.** "Tax-advantaged" uses the gain green, and the brand and primary colors are green too, so a tax badge reads like "this went up." Add dedicated tax tokens (`--tax-sheltered`, `--tax-taxable`) in a neutral tone, separate from gain/loss, and keep green and red strictly for change. Files: `globals.css`, `accounts-table.tsx`, `summary-cards.tsx`.
+- **V6 · Cards use four different depth styles.** Hero panels are transparent with a border and 2xl radius; `Card` is filled with a ring; summary tiles and movers use a border with no fill; tables use a border with xl radius. Pick one in-flow surface (a subtle fill plus a hairline ring), give radius one scale, and apply it everywhere.
+- **V7 · Sort headers are duplicated and incomplete** [O4]. `accounts-table.tsx` has its own copy of `SortHeader` even though `ui/sort-header.tsx` exists, and neither sets `aria-sort`. Delete the copy, add `aria-sort`, and replace the underline-only focus state with a proper ring.
+- **V8 · Pages don't match each other.** The range control is left-aligned on the dashboard but centered on account detail, and account detail repeats a "Value" label right under the account name. Applying V1's hero layout to `SingleHeroChart` fixes both.
+- **V9 · The mobile range bar overflows** [N8]. "ALL" is clipped with no hint that the bar scrolls. Moving it into the hero header (V1) and adding an edge fade solves this.
+- **V10 · The tokens are partly dead.** The light theme in `:root` is the untouched shadcn default, but the app always forces dark. The sidebar tokens are unused, including a stray purple `--sidebar-primary`. Remove them, or make the light theme real.
+
+**Notes**
+
+- The manual mortgage shows as Type "Other"; "Loan" would read better [U9].
+- Add `text-wrap: balance` to the AI headline and page titles.
+- Inter is a default font choice. It's acceptable, but a tabular display face for the hero figures would give the product more character. This is taste, not a defect.
+
 ---
 
 ## Execution order
@@ -164,17 +205,20 @@ Target layout, where each figure appears exactly once:
 ```
 Dashboard · Accounts · Daily summary                              (N)
 [banner, only if unseen; says "Yesterday's summary" when it's stale]
-┌ [Net worth  $X] | [Investments  $Y] ← switch; selected one is shown large
+┌ NET WORTH                      1D 1W 1M 3M (YTD 1Y … if data) ALL
+│ $X.¢¢  ← the one focal number; cents small and muted
 │ ±change (±%) past week · as of 3:14 PM
+│ Investments $Y (±%)  ← quieter second line, also drawn on the chart
 │ one chart with a light Y-axis scale
-│ 1D 1W 1M 3M (YTD 1Y … only when there's data) ALL
 └───────────────────────────────────────────────────────────────
 ┌ Assets · Debts · Property │ tax bar: Tax-advantaged | Taxable | Cash ┐
 Accounts                         Updated 3:14 PM · [Sync] [Add ▾]
 table (rows open the account's page)
 ```
 
-1. **One chart.** In `hero-charts.tsx`, use one chart at every screen width. Reuse the current phone tab markup as the Net worth / Investments switch, with each option showing its own value. Delete the side-by-side desktop grid (fixes D2, D3). Pull the range buttons into a `RangePills` component that `SingleHeroChart` also uses.
+1. **One hero (decided: the design review's version, V1).** In `hero-charts.tsx`, use one chart at every screen width with Net Worth as the only hero figure. Show Investments as a quieter second line on the same chart, with its own small figure and change. There is no metric switch, so the mobile tabs and the side-by-side desktop grid both go away (fixes D2, D3).
+   - Put the range control in the hero header, built as the accessible `RangeControl` from V4, and reuse it in `SingleHeroChart` (V8, V9).
+   - Show cents small and muted.
 2. **Breakdown card.** Replace `SummaryCards` with a `BreakdownCard` showing Assets, Debts, Property, and the tax bar with a separate Cash segment.
    - Calculate cash with `isCashType` (`lib/tax-classification.ts`) in its own small function.
    - Don't add it to `SnapshotFigures`: `computeAndStoreSnapshot` writes every field of `figures` into the database insert (`snapshot.ts:130-137`), so a new field would break the insert.
@@ -216,7 +260,19 @@ table (rows open the account's page)
    - Fix the dev route's environment variable.
    - Update the docs.
    - Pass `theme="dark"` to the toast component.
-4. **Accessibility (N8).** Proper tab semantics on the metric switch, pressed state on range buttons, sort state on table headers, and autofocus and a 6-character limit on the 2FA code fields.
+4. **Accessibility (N8).** Pressed state on range buttons, sort state on table headers, and autofocus and a 6-character limit on the 2FA code fields.
+
+### Phase 6: Visual design pass (V1–V10)
+
+Several items are already covered elsewhere: V3 is Phase 1 step 6, V7 is Phase 5 step 3, and V1, V4 and V9 merge into Phase 3 step 1. The rest, in the design review's suggested order:
+
+1. **Hero and controls (V1, V4, V8, V9).** Build the hero header with the range control inside it, the accessible `RangeControl` (Base UI toggle group, 40px hit area, focus ring, `aria-pressed`), and muted cents. Apply the same layout to `SingleHeroChart` on account detail and drop its repeated "Value" label. Give the banner's dismiss button a 40px hit area and a focus style.
+2. **Daily summary hierarchy (V2).** Make the headline the h1 with a small date line above it. Use muted 12px tile labels, one quieter section-heading level, primary-color body text at a readable line length, and consistent capitalization.
+3. **Color meaning (V5).** Add `--tax-sheltered` and `--tax-taxable` tokens in `globals.css` and use them for tax badges and the tax bar, so green and red mean only gain and loss.
+4. **One surface system (V6).** Choose one card surface (subtle fill plus hairline ring) and one radius scale, then apply them to the hero panels, `Card`, summary tiles, movers, and tables.
+5. **Token cleanup (V10).** Remove the unused light-theme and sidebar tokens, or build a real light theme.
+6. **Notes.** "Loan" for manual mortgages (with U9), `text-wrap: balance` on headings, and optionally a tabular display face for hero figures.
+7. **Save the system.** Record the decided patterns (surface, radius scale, type levels, range control) in `.interface-design/system.md` so later work stays consistent.
 
 ---
 
@@ -242,4 +298,5 @@ table (rows open the account's page)
   - **Bad ticker:** editing with one leaves the account intact.
   - **Sync toasts:** correct, including the "not configured" case.
   - **Widths:** works at 375px and 832px, and Gain/Loss isn't cut off.
+  - **Design pass:** the dashboard and daily summary each have one clear focal point when you squint; range buttons and the banner's dismiss button have visible focus rings and 40px targets; tax badges use no green or red; all cards share one surface and radius.
 - **After deploying:** repeat the read-only walkthrough of the live site at the same three widths.
